@@ -8,54 +8,65 @@ import {
   getPlaylistTracks,
 } from "../lib/spotify";
 import { loadSpotifyTokens, clearSpotifyTokens } from "../lib/storage";
-import { importSpotifyPlaylist } from "../lib/api";
 
 interface PlaylistItem {
   id: string;
   name: string;
   trackCount: number;
   imageUrl: string | null;
+  ownerId: string;
 }
 
 interface SpotifyPickerProps {
   onSelect: (tracks: Track[], playlistName: string) => void;
   onClose: () => void;
+  onBeforeLogin?: () => void;
 }
 
-export default function SpotifyPicker({ onSelect, onClose }: SpotifyPickerProps) {
-  const configured = true; // CLIENT_ID is always set
+// Extract playlist ID from a Spotify URL or URI
+function extractPlaylistId(input: string): string | null {
+  const urlMatch = input.match(/playlist\/([A-Za-z0-9]+)/);
+  if (urlMatch) return urlMatch[1];
+  const uriMatch = input.match(/spotify:playlist:([A-Za-z0-9]+)/);
+  if (uriMatch) return uriMatch[1];
+  return null;
+}
 
+export default function SpotifyPicker({ onSelect, onClose, onBeforeLogin }: SpotifyPickerProps) {
   const [user, setUser] = useState<{ id: string; name: string; avatarUrl: string | null } | null>(null);
   const [playlists, setPlaylists] = useState<PlaylistItem[]>([]);
+  const [showAll, setShowAll] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingPlaylistId, setLoadingPlaylistId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  // Public URL import
+  // URL import — works whether logged in or not (uses user token if available)
   const [urlInput, setUrlInput] = useState("");
   const [urlLoading, setUrlLoading] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
 
-  // On mount — try to restore session
+  // On mount — try to restore session from stored tokens
   useEffect(() => {
-    if (!configured) return;
     const tokens = loadSpotifyTokens();
     if (!tokens) return;
 
     setLoading(true);
     getProfile()
-      .then((profile) => {
+      .then(async (profile) => {
         setUser(profile);
-        return getUserPlaylists();
+        try {
+          const list = await getUserPlaylists();
+          setPlaylists(list);
+        } catch {
+          // playlists failed but user is still logged in
+        }
       })
-      .then(setPlaylists)
       .catch(() => {
-        // Token expired or revoked
         clearSpotifyTokens();
       })
       .finally(() => setLoading(false));
-  }, [configured]);
+  }, []);
 
   async function handleSelectPlaylist(pl: PlaylistItem) {
     setLoadingPlaylistId(pl.id);
@@ -77,13 +88,28 @@ export default function SpotifyPicker({ onSelect, onClose }: SpotifyPickerProps)
     setPlaylists([]);
   }
 
+  // URL import — extracts playlist ID and fetches tracks using the user's token.
+  // Works for any public playlist the logged-in user can access.
   async function handleImportUrl() {
-    if (!urlInput.trim()) return;
+    const trimmed = urlInput.trim();
+    if (!trimmed) return;
+
+    if (!loadSpotifyTokens()) {
+      setUrlError("Log in with Spotify first to import a playlist by URL.");
+      return;
+    }
+
+    const playlistId = extractPlaylistId(trimmed);
+    if (!playlistId) {
+      setUrlError("Could not find a playlist ID in that URL.");
+      return;
+    }
     setUrlLoading(true);
     setUrlError(null);
     try {
-      const { tracks, playlistId } = await importSpotifyPlaylist(urlInput.trim());
-      onSelect(tracks, `Spotify playlist (${playlistId})`);
+      const tracks = await getPlaylistTracks(playlistId);
+      if (tracks.length === 0) throw new Error("Playlist is empty or not accessible.");
+      onSelect(tracks, "Spotify playlist");
       onClose();
     } catch (err: unknown) {
       setUrlError(err instanceof Error ? err.message : "Failed to import playlist.");
@@ -92,9 +118,14 @@ export default function SpotifyPicker({ onSelect, onClose }: SpotifyPickerProps)
     }
   }
 
-  const filtered = playlists.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // In Spotify dev mode only playlists you own are accessible.
+  // Others are shown separately behind a toggle.
+  const ownedPlaylists = user ? playlists.filter((p) => p.ownerId === user.id) : playlists;
+  const otherPlaylists = user ? playlists.filter((p) => p.ownerId !== user.id) : [];
+  const visiblePlaylists = showAll ? playlists : ownedPlaylists;
+  const filtered = search
+    ? visiblePlaylists.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
+    : visiblePlaylists;
 
   return (
     <div className="spotify-modal-backdrop" onClick={onClose}>
@@ -118,51 +149,27 @@ export default function SpotifyPicker({ onSelect, onClose }: SpotifyPickerProps)
 
         <div className="spotify-picker__body">
 
-          {/* Not configured — ask user to set env var */}
-          {!configured && (
+          {/* Loading */}
+          {loading && (
             <div className="spotify-empty">
-              <div className="spotify-empty__icon">♫</div>
-              <p className="spotify-empty__title">Add your Spotify Client ID</p>
-              <p className="spotify-empty__sub">
-                Create a free app at{" "}
-                <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer">
-                  developer.spotify.com
-                </a>
-                , then add <code>http://localhost:5173</code> as a Redirect URI.
-              </p>
-              <div className="spotify-setup-steps">
-                <div className="spotify-setup-step">
-                  <span className="spotify-setup-step__num">1</span>
-                  <span>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer">Spotify Developer Dashboard</a> → Create app</span>
-                </div>
-                <div className="spotify-setup-step">
-                  <span className="spotify-setup-step__num">2</span>
-                  <span>Add Redirect URI: <code>http://localhost:5173</code></span>
-                </div>
-                <div className="spotify-setup-step">
-                  <span className="spotify-setup-step__num">3</span>
-                  <span>Copy your Client ID and create <code>client/.env.local</code>:</span>
-                </div>
-              </div>
-              <pre className="spotify-setup-code">VITE_SPOTIFY_CLIENT_ID=your_client_id_here</pre>
-              <p className="spotify-empty__sub" style={{ marginTop: 8 }}>
-                Restart the dev server after adding the variable.
-              </p>
+              <div className="loading-spinner" style={{ margin: "0 auto" }} />
             </div>
           )}
 
-          {/* Configured — not logged in */}
-          {configured && !user && !loading && (
+          {/* Not logged in */}
+          {!user && !loading && (
             <div className="spotify-empty">
               <div className="spotify-empty__icon">♫</div>
               <p className="spotify-empty__title">Connect your Spotify account</p>
               <p className="spotify-empty__sub">Browse and select from your personal playlists.</p>
-              <button className="btn-spotify-connect" onClick={() => startLogin().catch((e) => setError(e.message))}>
+              <button
+                className="btn-spotify-connect"
+                onClick={() => { onBeforeLogin?.(); startLogin().catch((e) => setError(e.message)); }}
+              >
                 Log in with Spotify
               </button>
               {error && <p className="error-text" style={{ marginTop: 12 }}>{error}</p>}
 
-              {/* Public URL import — always available when configured */}
               <div className="spotify-url-import">
                 <p className="spotify-url-import__label">Or paste a public playlist URL:</p>
                 <div className="spotify-url-import__row">
@@ -171,7 +178,7 @@ export default function SpotifyPicker({ onSelect, onClose }: SpotifyPickerProps)
                     type="text"
                     placeholder="https://open.spotify.com/playlist/…"
                     value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
+                    onChange={(e) => { setUrlInput(e.target.value); setUrlError(null); }}
                     onKeyDown={(e) => e.key === "Enter" && handleImportUrl()}
                   />
                   <button
@@ -187,14 +194,7 @@ export default function SpotifyPicker({ onSelect, onClose }: SpotifyPickerProps)
             </div>
           )}
 
-          {/* Loading */}
-          {loading && (
-            <div className="spotify-empty">
-              <div className="loading-spinner" style={{ margin: "0 auto" }} />
-            </div>
-          )}
-
-          {/* Logged in — playlist grid */}
+          {/* Logged in — search + grid */}
           {user && !loading && (
             <>
               <div className="spotify-picker__user">
@@ -204,6 +204,7 @@ export default function SpotifyPicker({ onSelect, onClose }: SpotifyPickerProps)
                 <span className="spotify-picker__username">{user.name}</span>
               </div>
 
+              {/* Search + URL import row */}
               <div className="spotify-picker__search-row">
                 <input
                   className="spotify-modal__input"
@@ -215,7 +216,40 @@ export default function SpotifyPicker({ onSelect, onClose }: SpotifyPickerProps)
                 />
               </div>
 
+              {/* URL paste — always visible when logged in too */}
+              <div className="spotify-url-import spotify-url-import--inline">
+                <div className="spotify-url-import__row">
+                  <input
+                    className="spotify-modal__input"
+                    type="text"
+                    placeholder="Or paste a playlist URL to import it…"
+                    value={urlInput}
+                    onChange={(e) => { setUrlInput(e.target.value); setUrlError(null); }}
+                    onKeyDown={(e) => e.key === "Enter" && handleImportUrl()}
+                  />
+                  <button
+                    className="btn-primary"
+                    onClick={handleImportUrl}
+                    disabled={urlLoading || !urlInput.trim()}
+                  >
+                    {urlLoading ? "…" : "Import"}
+                  </button>
+                </div>
+                {urlError && <p className="error-text">{urlError}</p>}
+              </div>
+
               {error && <p className="error-text" style={{ padding: "0 18px 8px" }}>{error}</p>}
+
+              {/* Toggle to show saved-but-not-owned playlists */}
+              {otherPlaylists.length > 0 && (
+                <div className="spotify-picker__filter-row">
+                  <button className="btn-link" onClick={() => setShowAll((v) => !v)}>
+                    {showAll
+                      ? `Show only your playlists (${ownedPlaylists.length})`
+                      : `Also show ${otherPlaylists.length} saved playlists (may be inaccessible)`}
+                  </button>
+                </div>
+              )}
 
               <div className="spotify-picker__grid">
                 {filtered.map((pl) => (
@@ -241,9 +275,14 @@ export default function SpotifyPicker({ onSelect, onClose }: SpotifyPickerProps)
                     <div className="spotify-pl-card__count muted">{pl.trackCount} tracks</div>
                   </button>
                 ))}
-                {filtered.length === 0 && (
+                {search && filtered.length === 0 && (
                   <p className="muted" style={{ padding: "16px", gridColumn: "1/-1" }}>
                     No playlists match "{search}"
+                  </p>
+                )}
+                {!search && playlists.length === 0 && (
+                  <p className="muted" style={{ padding: "16px", gridColumn: "1/-1" }}>
+                    No playlists found.
                   </p>
                 )}
               </div>

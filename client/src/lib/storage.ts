@@ -1,7 +1,10 @@
-import type { Route } from "../types/domain";
+import type { Route, RunPlan, Track } from "../types/domain";
 
 const ROUTE_KEY = "rs_route_v1";
 const ROUTE_NAME_KEY = "rs_route_name_v1";
+const RUN_PLAN_KEY = "rs_run_plan_v1";
+const PLAYLIST_KEY = "rs_playlist_v1";
+const PLAYLIST_NAME_KEY = "rs_playlist_name_v1";
 const SPOTIFY_ACCESS_KEY = "rs_spotify_access_v1";
 const SPOTIFY_REFRESH_KEY = "rs_spotify_refresh_v1";
 const SPOTIFY_EXPIRES_KEY = "rs_spotify_expires_v1";
@@ -35,6 +38,44 @@ export function loadRoute(): { route: Route; name: string } | null {
 export function clearRoute() {
   localStorage.removeItem(ROUTE_KEY);
   localStorage.removeItem(ROUTE_NAME_KEY);
+}
+
+// ---------------------------------------------------------------------------
+// RunPlan persistence
+// ---------------------------------------------------------------------------
+
+export function saveRunPlan(plan: RunPlan) {
+  try { localStorage.setItem(RUN_PLAN_KEY, JSON.stringify(plan)); } catch { /* ignore */ }
+}
+
+export function loadRunPlan(): RunPlan | null {
+  try {
+    const raw = localStorage.getItem(RUN_PLAN_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as RunPlan;
+  } catch { return null; }
+}
+
+// ---------------------------------------------------------------------------
+// Playlist persistence
+// ---------------------------------------------------------------------------
+
+export function savePlaylist(tracks: Track[], name: string) {
+  try {
+    localStorage.setItem(PLAYLIST_KEY, JSON.stringify(tracks));
+    localStorage.setItem(PLAYLIST_NAME_KEY, name);
+  } catch { /* ignore */ }
+}
+
+export function loadPlaylist(): { tracks: Track[]; name: string } | null {
+  try {
+    const raw = localStorage.getItem(PLAYLIST_KEY);
+    const name = localStorage.getItem(PLAYLIST_NAME_KEY) ?? "Playlist";
+    if (!raw) return null;
+    const tracks = JSON.parse(raw) as Track[];
+    if (!Array.isArray(tracks) || tracks.length === 0) return null;
+    return { tracks, name };
+  } catch { return null; }
 }
 
 // ---------------------------------------------------------------------------

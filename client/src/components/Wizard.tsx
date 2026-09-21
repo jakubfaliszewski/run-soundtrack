@@ -1,10 +1,21 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Route, RunPlan, RunStrategy, Track } from "../types/domain";
 import { formatDistance, formatPace, formatTimeHMS, parseTimeToSeconds } from "../lib/format";
 import { buildRunPlan, parseGpxClientSide, generateDemoRoute } from "../lib/engine";
 import { parseGpxFile } from "../lib/api";
 import { demoPlaylist } from "../data/demoPlaylist";
 import SpotifyPicker from "./SpotifyPicker";
+
+const WIZARD_DRAFT_KEY = "rs_wizard_draft";
+
+type WizardDraft = {
+  route: Route;
+  routeName: string;
+  targetTime: string;
+  strategy: RunStrategy;
+  splitPercent: number;
+  step: Step;
+};
 
 interface WizardProps {
   onComplete: (route: Route, routeName: string, plan: RunPlan, tracks: Track[]) => void;
@@ -35,6 +46,29 @@ export default function Wizard({ onComplete }: WizardProps) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [playlistName, setPlaylistName] = useState("");
   const [showSpotifyPicker, setShowSpotifyPicker] = useState(false);
+
+  // ── Restore draft on mount (after Spotify redirect) ──────────────────────
+  useEffect(() => {
+    const raw = sessionStorage.getItem(WIZARD_DRAFT_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(WIZARD_DRAFT_KEY);
+    try {
+      const draft: WizardDraft = JSON.parse(raw);
+      setRoute(draft.route);
+      setRouteName(draft.routeName);
+      setTargetTime(draft.targetTime);
+      setStrategy(draft.strategy);
+      setSplitPercent(draft.splitPercent);
+      setStep(draft.step);
+    } catch { /* corrupt draft — ignore */ }
+  }, []);
+
+  // ── Save draft before Spotify redirect ───────────────────────────────────
+  function saveDraft(toStep: Step) {
+    if (!route) return;
+    const draft: WizardDraft = { route, routeName, targetTime, strategy, splitPercent, step: toStep };
+    sessionStorage.setItem(WIZARD_DRAFT_KEY, JSON.stringify(draft));
+  }
 
   // ── Derived ──────────────────────────────────────────────────────────────
   const targetSecs = parseTimeToSeconds(targetTime);
@@ -317,8 +351,9 @@ export default function Wizard({ onComplete }: WizardProps) {
 
       {showSpotifyPicker && (
         <SpotifyPicker
-          onSelect={(t, name) => { setTracks(t); setPlaylistName(name); }}
+          onSelect={(t, name) => { setTracks(t); setPlaylistName(name); setShowSpotifyPicker(false); }}
           onClose={() => setShowSpotifyPicker(false)}
+          onBeforeLogin={() => saveDraft("playlist")}
         />
       )}
     </div>

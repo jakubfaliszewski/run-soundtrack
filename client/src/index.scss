@@ -834,7 +834,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 500;
+  z-index: 9999;
   padding: 20px;
 }
 
@@ -1307,6 +1307,12 @@ body {
 // Spotify Picker (modal, replaces SpotifyImport)
 // =========================================================
 
+.spotify-picker__filter-row {
+  padding: 2px 18px 6px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
 .spotify-picker {
   max-width: 600px;
   max-height: 80vh;
@@ -1550,6 +1556,13 @@ body {
   width: 100%;
   max-width: 360px;
   text-align: left;
+
+  &--inline {
+    max-width: 100%;
+    margin-top: 0;
+    padding: 8px 18px 4px;
+    box-sizing: border-box;
+  }
 
   &__label {
     font-size: 12px;

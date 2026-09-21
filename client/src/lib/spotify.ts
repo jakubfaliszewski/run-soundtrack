@@ -15,7 +15,10 @@ import {
 // ---------------------------------------------------------------------------
 
 export const CLIENT_ID = "52e7b5c8740247538201d358d4362577";
-const REDIRECT_URI = window.location.origin;
+
+// Must exactly match a URI registered in the Spotify developer dashboard.
+// Registered: http://127.0.0.1:5173
+const REDIRECT_URI = window.location.origin.replace("localhost", "127.0.0.1");
 const SCOPES = "playlist-read-private playlist-read-collaborative";
 
 const VERIFIER_KEY = "rs_spotify_pkce_verifier";
@@ -63,12 +66,11 @@ export async function startLogin(): Promise<void> {
 /**
  * Exchange the authorization code for tokens.
  * Call this when the app loads and `?code=` is present in the URL.
- * Returns true on success.
+ * Throws on failure so the caller can surface the error.
  */
 export async function handleCallback(code: string): Promise<boolean> {
-  if (!CLIENT_ID) return false;
   const verifier = sessionStorage.getItem(VERIFIER_KEY);
-  if (!verifier) return false;
+  if (!verifier) throw new Error("PKCE verifier missing — please try logging in again.");
   sessionStorage.removeItem(VERIFIER_KEY);
 
   const body = new URLSearchParams({
@@ -84,7 +86,10 @@ export async function handleCallback(code: string): Promise<boolean> {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
   });
-  if (!res.ok) return false;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string; error_description?: string };
+    throw new Error(err.error_description ?? err.error ?? `Token exchange failed (${res.status})`);
+  }
 
   const data = await res.json() as {
     access_token: string;
@@ -158,7 +163,7 @@ export async function getProfile(): Promise<{ id: string; name: string; avatarUr
 }
 
 export async function getUserPlaylists(): Promise<Array<{
-  id: string; name: string; trackCount: number; imageUrl: string | null;
+  id: string; name: string; trackCount: number; imageUrl: string | null; ownerId: string;
 }>> {
   const result = [];
   let url: string | null = "/me/playlists?limit=50";
@@ -167,10 +172,10 @@ export async function getUserPlaylists(): Promise<Array<{
     if (!res.ok) throw new Error("Failed to load playlists.");
     const data = await res.json() as {
       next: string | null;
-      items: Array<{ id: string; name: string; tracks: { total: number }; images: Array<{ url: string }> }>;
+      items: Array<{ id: string; name: string; items: { total: number }; images: Array<{ url: string }>; owner: { id: string } }>;
     };
     for (const pl of data.items) {
-      result.push({ id: pl.id, name: pl.name, trackCount: pl.tracks.total, imageUrl: pl.images?.[0]?.url ?? null });
+      result.push({ id: pl.id, name: pl.name, trackCount: pl.items?.total ?? 0, imageUrl: pl.images?.[0]?.url ?? null, ownerId: pl.owner?.id ?? "" });
     }
     url = data.next ? data.next.replace("https://api.spotify.com/v1", "") : null;
   }
@@ -179,17 +184,23 @@ export async function getUserPlaylists(): Promise<Array<{
 
 export async function getPlaylistTracks(playlistId: string): Promise<Track[]> {
   const tracks: Track[] = [];
-  let url: string | null = `/playlists/${playlistId}/tracks?limit=50&fields=next,items(track(id,name,duration_ms,artists(name),album(images)))`;
+  let url: string | null = `/playlists/${playlistId}/items?limit=50`;
   while (url) {
     const res = await apiFetch(url.startsWith("http") ? url.replace("https://api.spotify.com/v1", "") : url);
     if (!res.ok) throw new Error("Failed to load playlist tracks.");
     const data = await res.json() as {
       next: string | null;
-      items: Array<{ track: { id: string; name: string; duration_ms: number; artists: Array<{ name: string }>; album: { images: Array<{ url: string }> } } | null }>;
+      items: Array<{
+        item: {
+          id: string; name: string; duration_ms: number; type: string;
+          artists: Array<{ name: string }>;
+          album: { images: Array<{ url: string }> };
+        } | null;
+      }>;
     };
-    for (const item of data.items) {
-      if (!item.track) continue;
-      const t = item.track;
+    for (const entry of data.items) {
+      const t = entry.item;
+      if (!t || t.type !== "track") continue;
       tracks.push({
         id: t.id, title: t.name,
         artist: t.artists[0]?.name ?? "Unknown",

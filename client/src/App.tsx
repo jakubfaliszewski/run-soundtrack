@@ -3,7 +3,7 @@ import type { Route, RunPlan, TimedRoute, Soundtrack, Track } from "./types/doma
 import { buildTimedRoute, buildSoundtrack } from "./lib/engine";
 import { calculateSoundtrack } from "./lib/api";
 import { handleCallback as spotifyHandleCallback } from "./lib/spotify";
-import { saveRoute } from "./lib/storage";
+import { saveRoute, saveRunPlan, savePlaylist, loadRoute, loadRunPlan, loadPlaylist } from "./lib/storage";
 import Wizard from "./components/Wizard";
 import MapView from "./components/MapView";
 import PlaylistPanel from "./components/PlaylistPanel";
@@ -41,13 +41,13 @@ export default function App() {
   const [showSpotify, setShowSpotify] = useState(false);
 
   // ---------------------------------------------------------------------------
-  // On mount: handle Spotify PKCE callback (?code=...)
+  // On mount: restore persisted state, then handle Spotify callback
   // ---------------------------------------------------------------------------
   useEffect(() => {
+    // 1. Handle Spotify OAuth callback (?code=...)
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     const error = params.get("error");
-
     if (code) {
       window.history.replaceState({}, "", window.location.pathname);
       spotifyHandleCallback(code).then((ok) => {
@@ -55,6 +55,26 @@ export default function App() {
       });
     } else if (error) {
       window.history.replaceState({}, "", window.location.pathname);
+    }
+
+    // 2. Restore last session from localStorage
+    const savedRoute = loadRoute();
+    const savedPlan = loadRunPlan();
+    const savedPlaylist = loadPlaylist();
+    if (savedRoute && savedPlan && savedPlaylist) {
+      const timedRoute = buildTimedRoute(savedRoute.route, savedPlan);
+      const soundtrack = buildSoundtrack(savedRoute.route, timedRoute, savedPlaylist.tracks);
+      setAppState({
+        route: savedRoute.route,
+        routeName: savedRoute.name,
+        runPlan: savedPlan,
+        timedRoute,
+        soundtrack,
+        playlist: savedPlaylist.tracks,
+        playlistName: savedPlaylist.name,
+        selectedTrackId: null,
+        hoveredTrackId: null,
+      });
     }
   }, []);
 
@@ -70,6 +90,8 @@ export default function App() {
   ) => {
     setLoading(true);
     saveRoute(route, routeName);
+    saveRunPlan(plan);
+    savePlaylist(tracks, tracksName ?? "Playlist");
     try {
       let timedRoute: TimedRoute;
       let soundtrack: Soundtrack;
@@ -99,6 +121,7 @@ export default function App() {
     if (!appState) return;
     setLoading(true);
     saveRoute(route, appState.routeName);
+    saveRunPlan(plan);
     try {
       let timedRoute: TimedRoute;
       let soundtrack: Soundtrack;
@@ -125,6 +148,7 @@ export default function App() {
   // Playlist change — recompute soundtrack immediately
   // ---------------------------------------------------------------------------
   const handlePlaylistChange = useCallback((tracks: Track[], playlistName: string) => {
+    savePlaylist(tracks, playlistName);
     setAppState((s) => {
       if (!s) return null;
       const soundtrack = buildSoundtrack(s.route, s.timedRoute, tracks);
