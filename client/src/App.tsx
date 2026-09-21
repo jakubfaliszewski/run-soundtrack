@@ -2,7 +2,8 @@ import { useState, useCallback, useEffect } from "react";
 import type { Route, RunPlan, TimedRoute, Soundtrack, Track } from "./types/domain";
 import { buildTimedRoute, buildSoundtrack } from "./lib/engine";
 import { calculateSoundtrack } from "./lib/api";
-import { saveRoute, saveSpotifySession, loadSpotifySession } from "./lib/storage";
+import { handleCallback as spotifyHandleCallback } from "./lib/spotify";
+import { saveRoute } from "./lib/storage";
 import Wizard from "./components/Wizard";
 import MapView from "./components/MapView";
 import PlaylistPanel from "./components/PlaylistPanel";
@@ -39,27 +40,20 @@ export default function App() {
   const [showSetup, setShowSetup] = useState(false);
   const [showSpotify, setShowSpotify] = useState(false);
 
-  // Spotify auth — session key kept in localStorage; local state only needed to
-  // trigger re-render when login completes in the same tab.
-  const [, setSpotifySession] = useState<string | null>(loadSpotifySession);
-
   // ---------------------------------------------------------------------------
-  // On mount: handle OAuth callback & try to restore saved route
+  // On mount: handle Spotify PKCE callback (?code=...)
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const error = params.get("error");
 
-    // OAuth callback
-    const sessionKey = params.get("spotify_session");
-    const spotifyError = params.get("spotify_error");
-
-    if (sessionKey) {
-      saveSpotifySession(sessionKey);
-      setSpotifySession(sessionKey);
+    if (code) {
       window.history.replaceState({}, "", window.location.pathname);
-      // Open the Spotify picker immediately after login
-      setShowSpotify(true);
-    } else if (spotifyError) {
+      spotifyHandleCallback(code).then((ok) => {
+        if (ok) setShowSpotify(true);
+      });
+    } else if (error) {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);

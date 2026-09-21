@@ -70,31 +70,35 @@ npm test
 
 ## Spotify Setup (optional)
 
-Two modes of Spotify integration are available:
+Spotify login is **fully client-side** using PKCE — no client secret, no server involvement for user auth.
 
-### Mode 1: User login (full access to private playlists)
+### User login (browse your private playlists)
 
-1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) and create an app.
+1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) and **create an app**.
 2. In your app settings, add this **Redirect URI**:
    ```
-   http://localhost:3001/api/spotify/callback
+   http://localhost:5173
    ```
-3. Copy your credentials into `server/.env` (create it from `server/.env.example`):
+3. Create `client/.env.local` with your Client ID:
    ```bash
-   SPOTIFY_CLIENT_ID=your_client_id
-   SPOTIFY_CLIENT_SECRET=your_client_secret
+   VITE_SPOTIFY_CLIENT_ID=your_client_id_here
    ```
-4. Restart the server. The **"Log in with Spotify"** button will appear in the playlist picker.
+4. Restart the Vite dev server (`npm run dev` in `client/`). The **"Log in with Spotify"** button will appear.
 
-The login flow uses **PKCE** (Proof Key for Code Exchange) — the client secret stays on the server and is never exposed to the browser.
+The browser handles the full PKCE flow — no client secret is ever needed or exposed.
 
-### Mode 2: Public playlist URL (no login)
+### Public playlist URL import (no login)
 
-If you set `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`, you can also paste any **public** Spotify playlist URL directly in the app — no user login required. This uses the Client Credentials flow.
+Paste any public Spotify playlist URL in the picker. This uses the server's Client Credentials flow and requires both credentials in `server/.env`:
+
+```bash
+SPOTIFY_CLIENT_ID=your_client_id
+SPOTIFY_CLIENT_SECRET=your_client_secret
+```
 
 ### No Spotify at all
 
-The app works fine without any Spotify credentials. The demo playlist of 25 tracks is always available.
+The app works fine without any Spotify setup. The built-in demo playlist of 25 tracks is always available.
 
 ---
 
@@ -121,10 +125,11 @@ The **Soundtrack Engine** is a pure function — it receives `Route`, `TimedRout
 | `server/src/services/gpxParser.ts` | GPX XML → `Route` |
 | `server/src/services/distance.ts` | Haversine formula |
 | `server/src/routes/route.ts` | `POST /api/routes/parse`, `POST /api/soundtrack` |
-| `server/src/routes/spotify.ts` | All Spotify endpoints (OAuth + playlist fetch) |
+| `server/src/routes/spotify.ts` | Public playlist import endpoint (client credentials) |
 | `client/src/lib/engine.ts` | Client-side mirror of the engine (offline fallback) |
-| `client/src/lib/api.ts` | All API calls |
-| `client/src/lib/storage.ts` | LocalStorage: route persistence + Spotify session key |
+| `client/src/lib/spotify.ts` | Client-side PKCE auth + Spotify API calls |
+| `client/src/lib/api.ts` | Server API calls (GPX parse, soundtrack, public playlist import) |
+| `client/src/lib/storage.ts` | LocalStorage: route + Spotify token persistence |
 | `client/src/components/Wizard.tsx` | Onboarding flow (GPX → pace → playlist) |
 | `client/src/components/MapView.tsx` | Leaflet map with segments, markers, tooltips |
 | `client/src/components/SpotifyPicker.tsx` | Spotify login + playlist grid |
@@ -163,37 +168,11 @@ Multipart file upload. Accepts `.gpx`. Returns a `Route`.
 
 Returns `{ timedRoute, soundtrack }`.
 
-### `GET /api/spotify/status`
-
-Returns `{ configured: boolean }` — whether server has Spotify credentials set.
-
-### `GET /api/spotify/login`
-
-Redirects to Spotify's OAuth authorization page. Requires credentials in `.env`.
-
-### `GET /api/spotify/callback`
-
-OAuth callback. Redirects back to the client with `?spotify_session=<key>`.
-
-### `GET /api/spotify/me`
-
-Returns the authenticated user's profile. Requires `x-spotify-session` header.
-
-### `GET /api/spotify/me/playlists`
-
-Returns all the user's playlists. Requires `x-spotify-session` header.
-
-### `GET /api/spotify/me/playlists/:id/tracks`
-
-Returns `Track[]` for a playlist. Requires `x-spotify-session` header.
-
 ### `GET /api/spotify/playlist?url=<spotify-url>`
 
-Fetches a **public** playlist by URL using Client Credentials. No user session needed.
+Fetches a **public** playlist by URL using server-side Client Credentials. Requires `SPOTIFY_CLIENT_ID` + `SPOTIFY_CLIENT_SECRET` in `server/.env`.
 
-### `POST /api/spotify/logout`
-
-Invalidates the server-side session. Requires `x-spotify-session` header.
+> User login (OAuth PKCE) is handled entirely in the browser via `client/src/lib/spotify.ts` — no server endpoints involved.
 
 ---
 

@@ -2,7 +2,6 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import { routeRoutes } from "./routes/route.js";
-import { spotifyRoutes } from "./routes/spotify.js";
 
 const app = Fastify({ logger: true });
 
@@ -15,7 +14,6 @@ await app.register(multipart, {
 });
 
 await app.register(routeRoutes);
-await app.register(spotifyRoutes);
 
 app.get("/api/health", async () => ({ status: "ok" }));
 

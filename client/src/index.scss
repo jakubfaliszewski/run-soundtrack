@@ -1482,6 +1482,90 @@ body {
       border-radius: $radius-xs;
     }
   }
+  a { color: $color-accent-light; }
+}
+
+// Setup steps shown when VITE_SPOTIFY_CLIENT_ID is not set
+.spotify-setup-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 2px;
+  text-align: left;
+  width: 100%;
+  max-width: 360px;
+}
+
+.spotify-setup-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: $color-text;
+  line-height: 1.5;
+
+  a { color: $color-accent-light; }
+
+  code {
+    font-family: $font-mono;
+    background: $color-surface-2;
+    padding: 1px 4px;
+    border-radius: $radius-xs;
+  }
+
+  &__num {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: $color-accent;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+}
+
+.spotify-setup-code {
+  width: 100%;
+  max-width: 360px;
+  background: $color-surface-2;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  padding: 10px 14px;
+  font-family: $font-mono;
+  font-size: 12px;
+  color: $color-text;
+  margin: 4px 0 0;
+  text-align: left;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.spotify-url-import {
+  margin-top: 20px;
+  width: 100%;
+  max-width: 360px;
+  text-align: left;
+
+  &__label {
+    font-size: 12px;
+    color: $color-muted;
+    margin-bottom: 6px;
+  }
+
+  &__row {
+    display: flex;
+    gap: 8px;
+
+    .spotify-modal__input { flex: 1; }
+    .btn-primary { flex-shrink: 0; padding: 6px 14px; font-size: 13px; }
+  }
+
+  .error-text { margin-top: 6px; }
 }
 
 .btn-spotify-connect {

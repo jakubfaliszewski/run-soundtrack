@@ -2,7 +2,9 @@ import type { Route } from "../types/domain";
 
 const ROUTE_KEY = "rs_route_v1";
 const ROUTE_NAME_KEY = "rs_route_name_v1";
-const SPOTIFY_SESSION_KEY = "rs_spotify_session_v1";
+const SPOTIFY_ACCESS_KEY = "rs_spotify_access_v1";
+const SPOTIFY_REFRESH_KEY = "rs_spotify_refresh_v1";
+const SPOTIFY_EXPIRES_KEY = "rs_spotify_expires_v1";
 
 // ---------------------------------------------------------------------------
 // Route persistence
@@ -23,7 +25,6 @@ export function loadRoute(): { route: Route; name: string } | null {
     const name = localStorage.getItem(ROUTE_NAME_KEY) ?? "My Route";
     if (!raw) return null;
     const route = JSON.parse(raw) as Route;
-    // Basic validation
     if (!route.points || route.points.length < 2 || !route.totalDistanceMeters) return null;
     return { route, name };
   } catch {
@@ -37,19 +38,45 @@ export function clearRoute() {
 }
 
 // ---------------------------------------------------------------------------
-// Spotify session key persistence
+// Spotify token persistence
 // ---------------------------------------------------------------------------
 
-export function saveSpotifySession(key: string) {
+export function saveSpotifyTokens(
+  accessToken: string,
+  refreshToken: string,
+  expiresInSeconds: number,
+) {
   try {
-    localStorage.setItem(SPOTIFY_SESSION_KEY, key);
+    localStorage.setItem(SPOTIFY_ACCESS_KEY, accessToken);
+    localStorage.setItem(SPOTIFY_REFRESH_KEY, refreshToken);
+    localStorage.setItem(SPOTIFY_EXPIRES_KEY, String(Date.now() + (expiresInSeconds - 60) * 1000));
   } catch { /* ignore */ }
 }
 
-export function loadSpotifySession(): string | null {
-  return localStorage.getItem(SPOTIFY_SESSION_KEY);
+export function loadSpotifyTokens(): {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+} | null {
+  const accessToken = localStorage.getItem(SPOTIFY_ACCESS_KEY);
+  const refreshToken = localStorage.getItem(SPOTIFY_REFRESH_KEY);
+  const expiresAt = Number(localStorage.getItem(SPOTIFY_EXPIRES_KEY) ?? "0");
+  if (!accessToken || !refreshToken) return null;
+  return { accessToken, refreshToken, expiresAt };
 }
 
-export function clearSpotifySession() {
-  localStorage.removeItem(SPOTIFY_SESSION_KEY);
+export function clearSpotifyTokens() {
+  localStorage.removeItem(SPOTIFY_ACCESS_KEY);
+  localStorage.removeItem(SPOTIFY_REFRESH_KEY);
+  localStorage.removeItem(SPOTIFY_EXPIRES_KEY);
+  // Also clear old session key format if present
+  localStorage.removeItem("rs_spotify_session_v1");
 }
+
+// Keep old names as aliases so existing call-sites that haven't been updated yet compile
+/** @deprecated Use saveSpotifyTokens */
+export function saveSpotifySession(_key: string) { /* no-op, replaced by token storage */ }
+/** @deprecated Use loadSpotifyTokens */
+export function loadSpotifySession(): string | null { return localStorage.getItem(SPOTIFY_ACCESS_KEY); }
+/** @deprecated Use clearSpotifyTokens */
+export function clearSpotifySession() { clearSpotifyTokens(); }

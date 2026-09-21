@@ -1,12 +1,6 @@
 import type { Route, RunPlan, Track, TimedRoute, Soundtrack } from "../types/domain";
-import { loadSpotifySession } from "./storage";
 
 const BASE = "/api";
-
-function spotifyHeaders(): HeadersInit {
-  const session = loadSpotifySession();
-  return session ? { "x-spotify-session": session } : {};
-}
 
 // ---------------------------------------------------------------------------
 // GPX
@@ -42,7 +36,9 @@ export async function calculateSoundtrack(
 }
 
 // ---------------------------------------------------------------------------
-// Spotify — public playlist import (no auth)
+// Spotify — public playlist import (server-side client credentials)
+// Requires SPOTIFY_CLIENT_ID + SPOTIFY_CLIENT_SECRET set on the server.
+// Used when importing a public playlist URL without a user login.
 // ---------------------------------------------------------------------------
 
 export async function importSpotifyPlaylist(
@@ -56,54 +52,4 @@ export async function importSpotifyPlaylist(
     );
   }
   return body as { tracks: Track[]; playlistId: string };
-}
-
-// ---------------------------------------------------------------------------
-// Spotify — OAuth / user auth
-// ---------------------------------------------------------------------------
-
-export async function getSpotifyStatus(): Promise<{ configured: boolean }> {
-  const res = await fetch(`${BASE}/spotify/status`);
-  return res.json();
-}
-
-export function startSpotifyLogin() {
-  window.location.href = `${BASE}/spotify/login`;
-}
-
-export async function getSpotifyProfile(): Promise<{ id: string; name: string; avatarUrl: string | null }> {
-  const res = await fetch(`${BASE}/spotify/me`, { headers: spotifyHeaders() });
-  if (!res.ok) throw new Error("Not authenticated");
-  return res.json();
-}
-
-export async function getSpotifyPlaylists(): Promise<Array<{
-  id: string; name: string; trackCount: number; imageUrl: string | null;
-}>> {
-  const res = await fetch(`${BASE}/spotify/me/playlists`, { headers: spotifyHeaders() });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string }).error ?? "Failed to load playlists.");
-  }
-  const { playlists } = await res.json();
-  return playlists;
-}
-
-export async function getSpotifyPlaylistTracks(playlistId: string): Promise<Track[]> {
-  const res = await fetch(`${BASE}/spotify/me/playlists/${playlistId}/tracks`, {
-    headers: spotifyHeaders(),
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string }).error ?? "Failed to load tracks.");
-  }
-  const { tracks } = await res.json();
-  return tracks as Track[];
-}
-
-export async function logoutSpotify(): Promise<void> {
-  await fetch(`${BASE}/spotify/logout`, {
-    method: "POST",
-    headers: spotifyHeaders(),
-  });
 }
