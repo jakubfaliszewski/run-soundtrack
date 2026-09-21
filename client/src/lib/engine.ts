@@ -230,44 +230,14 @@ export function getRouteSegmentPoints(route: Route, startDist: number, endDist: 
 // ---------------------------------------------------------------------------
 
 /**
- * Generates a synthetic 10km demo route in a grid pattern.
- * Used as the initial state so the app works without a GPX upload.
+ * Loads the real PKO Cracovia Royal Half Marathon 2025 route (21.1 km, Kraków).
+ * The GPX is served as a static asset at /demo-route.gpx so no API key or
+ * internet connection beyond the local dev server is required.
  */
-export function generateDemoRoute(): Route {
-  // Start near Berlin Tiergarten area
-  const startLat = 52.516;
-  const startLng = 13.378;
-
-  const totalPoints = 200;
-  const totalDistanceTarget = 10_000; // 10 km
-
-  const points: RoutePoint[] = [];
-  let cumDist = 0;
-  let elevGain = 0;
-
-  // Simple oval-ish path
-  for (let i = 0; i < totalPoints; i++) {
-    const angle = (i / totalPoints) * 2 * Math.PI;
-    const lat = startLat + 0.04 * Math.sin(angle);
-    const lng = startLng + 0.06 * Math.cos(angle);
-
-    if (i > 0) {
-      const prev = points[i - 1];
-      cumDist += haversineMeters(prev.lat, prev.lng, lat, lng);
-    }
-    points.push({ lat, lng, distanceMeters: cumDist });
-  }
-
-  // Scale distances to exactly 10 km
-  const scale = totalDistanceTarget / cumDist;
-  const scaledPoints = points.map((pt) => ({
-    ...pt,
-    distanceMeters: pt.distanceMeters * scale,
-  }));
-
-  return {
-    points: scaledPoints,
-    totalDistanceMeters: totalDistanceTarget,
-    elevationGainMeters: elevGain,
-  };
+export async function generateDemoRoute(): Promise<{ route: Route; name: string }> {
+  const res = await fetch("/demo-route.gpx");
+  if (!res.ok) throw new Error("Could not load demo route.");
+  const text = await res.text();
+  const route = parseGpxClientSide(text);
+  return { route, name: "PKO Cracovia Royal Half Marathon 2025" };
 }

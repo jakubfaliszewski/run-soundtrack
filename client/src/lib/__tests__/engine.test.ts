@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   parseGpxClientSide,
   getPaceAtDistance,
@@ -321,19 +321,42 @@ describe("buildRunPlan", () => {
 // generateDemoRoute
 // ---------------------------------------------------------------------------
 
+// The function fetches /demo-route.gpx at runtime. In tests we mock fetch so
+// we don't need a dev server running.
+const MOCK_GPX = `<?xml version="1.0"?>
+<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk><trkseg>
+    <trkpt lat="50.0693" lon="19.9868"><ele>200</ele></trkpt>
+    <trkpt lat="50.0700" lon="19.9880"><ele>201</ele></trkpt>
+    <trkpt lat="50.0710" lon="19.9895"><ele>202</ele></trkpt>
+  </trkseg></trk>
+</gpx>`;
+
 describe("generateDemoRoute", () => {
-  it("returns a valid route with >= 2 points", () => {
-    const route = generateDemoRoute();
+  beforeEach(() => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve(MOCK_GPX),
+    } as unknown as Response);
+  });
+
+  it("returns a route with >= 2 points", async () => {
+    const { route } = await generateDemoRoute();
     expect(route.points.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("total distance is approximately 10 km", () => {
-    const route = generateDemoRoute();
-    expect(route.totalDistanceMeters).toBeCloseTo(10000, -2); // ±100 m
+  it("first point distance is 0", async () => {
+    const { route } = await generateDemoRoute();
+    expect(route.points[0].distanceMeters).toBe(0);
   });
 
-  it("first point distance is 0", () => {
-    const route = generateDemoRoute();
-    expect(route.points[0].distanceMeters).toBe(0);
+  it("returns the correct route name", async () => {
+    const { name } = await generateDemoRoute();
+    expect(name).toBe("PKO Cracovia Royal Half Marathon 2025");
+  });
+
+  it("throws when fetch fails", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false } as Response);
+    await expect(generateDemoRoute()).rejects.toThrow();
   });
 });

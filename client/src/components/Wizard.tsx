@@ -49,12 +49,19 @@ export default function Wizard({ onComplete }: WizardProps) {
   }
 
   // ── Demo route ───────────────────────────────────────────────────────────
-  function handleUseDemoRoute() {
-    const demo = generateDemoRoute();
-    setRoute(demo);
-    setRouteName("Berlin Demo Run");
-    setTargetTime(suggestTargetTime(demo));
+  async function handleUseDemoRoute() {
+    setRouteLoading(true);
     setRouteError(null);
+    try {
+      const { route: demo, name } = await generateDemoRoute();
+      setRoute(demo);
+      setRouteName(name);
+      setTargetTime(suggestTargetTime(demo));
+    } catch (err: unknown) {
+      setRouteError(err instanceof Error ? err.message : "Could not load demo route.");
+    } finally {
+      setRouteLoading(false);
+    }
   }
 
   // ── GPX handlers ─────────────────────────────────────────────────────────
@@ -155,7 +162,7 @@ export default function Wizard({ onComplete }: WizardProps) {
               <button className="btn-link" onClick={handleUseDemoRoute}>
                 Use demo route
               </button>
-              <span className="muted"> (10 km Berlin loop)</span>
+              <span className="muted"> (21.1 km Kraków)</span>
             </div>
 
             <div className="wizard__actions">
