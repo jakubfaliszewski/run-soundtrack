@@ -1,0 +1,1510 @@
+// =========================================================
+// Variables
+// =========================================================
+
+$color-bg:           #0a0c12;
+$color-surface:      #13161f;
+$color-surface-2:    #1c2030;
+$color-surface-3:    #242840;
+$color-border:       #272b3d;
+$color-border-light: #353a52;
+$color-text:         #e4e7f0;
+$color-muted:        #6b7294;
+$color-accent:       #3b82f6;
+$color-accent-light: #60a5fa;
+$color-spotify:      #1db954;
+$color-warning:      #f59e0b;
+$color-success:      #22c55e;
+$color-danger:       #ef4444;
+
+$radius:    8px;
+$radius-sm: 5px;
+$radius-xs: 3px;
+$font:      -apple-system, "Segoe UI", system-ui, sans-serif;
+$font-mono: "SF Mono", "Fira Code", ui-monospace, monospace;
+
+$header-h:       54px;
+$timeline-h:     102px;
+$bottom-panel-h: 256px;
+
+// Emit as CSS custom properties for runtime inline styles
+:root {
+  --color-bg:           #{$color-bg};
+  --color-surface:      #{$color-surface};
+  --color-surface-2:    #{$color-surface-2};
+  --color-border:       #{$color-border};
+  --color-text:         #{$color-text};
+  --color-muted:        #{$color-muted};
+  --color-accent:       #{$color-accent};
+  --color-accent-light: #{$color-accent-light};
+  --color-warning:      #{$color-warning};
+  --color-success:      #{$color-success};
+  --color-danger:       #{$color-danger};
+  --color-spotify:      #{$color-spotify};
+}
+
+// =========================================================
+// Reset & Base
+// =========================================================
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: $font;
+  font-size: 14px;
+  line-height: 1.6;
+  background: $color-bg;
+  color: $color-text;
+  -webkit-font-smoothing: antialiased;
+}
+
+// =========================================================
+// Layout
+// =========================================================
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-header {
+  height: $header-h;
+  background: $color-surface;
+  border-bottom: 1px solid $color-border;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+  z-index: 100;
+
+  &__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__icon {
+    font-size: 18px;
+    color: $color-accent;
+  }
+
+  &__title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.demo-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: $color-muted;
+  border: 1px solid $color-border-light;
+  border-radius: $radius-xs;
+  padding: 2px 6px;
+  margin-left: 4px;
+}
+
+.app-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.map-section {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.map-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+// Keep Leaflet below our overlays
+.leaflet-pane         { z-index: 1; }
+.leaflet-top,
+.leaflet-bottom       { z-index: 10; }
+
+// Leaflet tooltip styling
+.leaflet-tooltip {
+  background: $color-surface !important;
+  border: 1px solid $color-border-light !important;
+  border-radius: $radius-sm !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+  padding: 0 !important;
+  color: $color-text !important;
+
+  &::before { display: none !important; }
+}
+
+.map-tooltip {
+  padding: 8px 10px;
+
+  &__title {
+    font-size: 12px;
+    font-weight: 700;
+    color: $color-text;
+    white-space: nowrap;
+  }
+
+  &__artist {
+    font-size: 11px;
+    color: $color-muted;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    font-size: 10px;
+    color: $color-muted;
+    margin-top: 2px;
+    white-space: nowrap;
+    font-family: $font-mono;
+  }
+}
+
+.bottom-panel {
+  height: $bottom-panel-h;
+  display: flex;
+  border-top: 1px solid $color-border;
+  flex-shrink: 0;
+}
+
+.bottom-left {
+  width: 300px;
+  flex-shrink: 0;
+  border-right: 1px solid $color-border;
+  overflow-y: auto;
+}
+
+.bottom-right {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.timeline-section {
+  height: $timeline-h;
+  border-top: 1px solid $color-border;
+  background: $color-surface;
+  flex-shrink: 0;
+  padding: 10px 20px 8px;
+}
+
+// =========================================================
+// Setup overlay
+// =========================================================
+
+.setup-overlay {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 20px;
+  overflow-y: auto;
+  background: $color-bg;
+}
+
+.setup-panel {
+  width: 100%;
+  max-width: 500px;
+}
+
+.setup-header {
+  margin-bottom: 36px;
+}
+
+.app-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: $color-text;
+  letter-spacing: -0.3px;
+}
+
+.app-subtitle {
+  color: $color-muted;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.setup-section {
+  h2 {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: $color-muted;
+    margin-bottom: 10px;
+  }
+}
+
+// Drop zone
+.drop-zone {
+  border: 1.5px dashed $color-border-light;
+  border-radius: $radius;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+
+  &:hover {
+    border-color: $color-accent;
+    background: rgba($color-accent, 0.04);
+  }
+
+  &--loaded {
+    border-style: solid;
+    border-color: $color-success;
+    background: rgba($color-success, 0.04);
+
+    .drop-zone__icon { color: $color-success; }
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  &__icon {
+    font-size: 22px;
+    font-weight: 700;
+    color: $color-muted;
+    margin-bottom: 2px;
+  }
+
+  &__label {
+    font-size: 14px;
+    font-weight: 700;
+    color: $color-text;
+  }
+
+  &__sub {
+    font-size: 12px;
+    color: $color-muted;
+  }
+
+  &__replace {
+    font-size: 11px;
+    color: $color-muted;
+    text-decoration: underline;
+    margin-top: 6px;
+    opacity: 0.5;
+  }
+}
+
+// Inputs
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.time-input {
+  background: $color-surface-2;
+  border: 1.5px solid $color-border;
+  border-radius: $radius-sm;
+  color: $color-text;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: $font-mono;
+  padding: 8px 14px;
+  width: 148px;
+  outline: none;
+  letter-spacing: 1px;
+
+  &:focus { border-color: $color-accent; }
+}
+
+.pace-badge {
+  font-size: 13px;
+  color: $color-muted;
+  font-family: $font-mono;
+}
+
+// Strategy
+.strategy-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.strategy-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1.5px solid $color-border;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+
+  input { accent-color: $color-accent; }
+
+  &--active {
+    border-color: $color-accent;
+    background: rgba($color-accent, 0.06);
+  }
+}
+
+.strategy-label {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.strategy-desc {
+  font-size: 12px;
+  color: $color-muted;
+  margin-left: auto;
+}
+
+// Split config
+.split-config {
+  margin-top: 10px;
+  padding: 14px;
+  background: $color-surface-2;
+  border-radius: $radius-sm;
+  border: 1px solid $color-border;
+}
+
+.split-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 10px;
+  color: $color-muted;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.split-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.split-slider {
+  flex: 1;
+  accent-color: $color-accent;
+}
+
+.split-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: $color-text;
+  font-family: $font-mono;
+  width: 36px;
+}
+
+.split-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: $color-text;
+  font-family: $font-mono;
+
+  .arrow { color: $color-muted; font-family: $font; }
+}
+
+// Buttons
+.btn-primary {
+  background: $color-accent;
+  color: #fff;
+  border: none;
+  border-radius: $radius-sm;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: $font;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) { background: $color-accent-light; }
+  &:disabled { opacity: 0.35; cursor: not-allowed; }
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1.5px solid $color-border-light;
+  border-radius: $radius-sm;
+  color: $color-text;
+  font-size: 13px;
+  font-family: $font;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: $color-accent;
+    color: $color-accent-light;
+  }
+}
+
+.btn-spotify {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba($color-spotify, 0.1);
+  border: 1.5px solid rgba($color-spotify, 0.3);
+  border-radius: $radius-sm;
+  color: $color-spotify;
+  font-size: 13px;
+  font-family: $font;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba($color-spotify, 0.18);
+    border-color: $color-spotify;
+  }
+
+  &__icon { font-size: 14px; }
+}
+
+.error-text {
+  color: $color-danger;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+// =========================================================
+// Run Summary
+// =========================================================
+
+.run-summary {
+  padding: 14px 16px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  margin-bottom: 12px;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: $color-text;
+  line-height: 1.15;
+  letter-spacing: -0.3px;
+  font-family: $font-mono;
+
+  &-unit {
+    font-size: 12px;
+    font-weight: 400;
+    color: $color-muted;
+    font-family: $font;
+    letter-spacing: 0;
+  }
+}
+
+.summary-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: $color-muted;
+}
+
+.summary-strategy {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid $color-border;
+}
+
+.strategy-tag {
+  font-size: 12px;
+  color: $color-muted;
+
+  &__paces {
+    font-family: $font-mono;
+    font-size: 11px;
+  }
+}
+
+.summary-playlist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+  }
+
+  &__source {
+    display: flex;
+    align-items: center;
+  }
+}
+
+.source-spotify {
+  font-size: 11px;
+  font-weight: 700;
+  color: $color-spotify;
+}
+
+.source-demo-link {
+  background: none;
+  border: none;
+  font-size: 11px;
+  font-family: $font;
+  color: $color-muted;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  transition: color 0.15s;
+
+  &:hover { color: $color-spotify; }
+}
+
+.warning-badge {
+  font-size: 11px;
+  color: $color-warning;
+
+  &--short { color: $color-danger; }
+}
+
+// =========================================================
+// Playlist Panel
+// =========================================================
+
+.playlist-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  &__header {
+    padding: 10px 16px 8px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-shrink: 0;
+    border-bottom: 1px solid $color-border;
+
+    h3 {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: $color-muted;
+    }
+  }
+}
+
+.playlist-warning {
+  padding: 5px 14px;
+  font-size: 11px;
+  color: $color-danger;
+  background: rgba($color-danger, 0.07);
+  flex-shrink: 0;
+}
+
+.playlist-info {
+  padding: 5px 14px;
+  font-size: 11px;
+  color: $color-muted;
+  background: rgba($color-accent, 0.05);
+  flex-shrink: 0;
+}
+
+.playlist-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+
+// Track Item
+.track-item {
+  padding: 7px 14px 7px 10px;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: background 0.1s;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+
+  &:hover,
+  &--selected { background: $color-surface-2; }
+
+  &__number {
+    font-size: 10px;
+    font-weight: 700;
+    color: $color-muted;
+    min-width: 16px;
+    text-align: right;
+    margin-top: 3px;
+    font-family: $font-mono;
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+
+  &__artist {
+    font-size: 11px;
+    color: $color-muted;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__range {
+    font-size: 10px;
+    color: $color-muted;
+    margin-top: 2px;
+    font-family: $font-mono;
+  }
+
+  &__art {
+    width: 36px;
+    height: 36px;
+    border-radius: $radius-xs;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+}
+
+// =========================================================
+// Timeline
+// =========================================================
+
+.timeline {
+  height: 100%;
+  position: relative;
+  user-select: none;
+
+  &__axis {
+    position: relative;
+    height: 16px;
+    margin-bottom: 5px;
+  }
+
+  &__tick {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+
+    &:first-child { transform: none; }
+    &:last-child { transform: translateX(-100%); }
+  }
+
+  &__tick-label {
+    font-size: 10px;
+    color: $color-muted;
+    white-space: nowrap;
+    font-family: $font-mono;
+  }
+
+  &__bar {
+    position: relative;
+    height: 20px;
+    background: $color-surface-2;
+    border-radius: $radius-xs;
+    overflow: hidden;
+    margin-bottom: 5px;
+  }
+
+  &__segment {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    cursor: pointer;
+    transition: opacity 0.12s;
+    border-right: 1px solid $color-bg;
+
+    &--active {
+      outline: 1.5px solid rgba(255,255,255,0.4);
+      outline-offset: -1px;
+      z-index: 2;
+    }
+  }
+
+  &__labels {
+    position: relative;
+    height: 18px;
+    overflow: hidden;
+  }
+
+  &__label {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    cursor: pointer;
+    overflow: hidden;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    padding-left: 4px;
+    gap: 3px;
+  }
+
+  &__label-num {
+    font-family: $font-mono;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  &__label-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// =========================================================
+// Spotify Import Modal
+// =========================================================
+
+.spotify-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba($color-bg, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 20px;
+}
+
+.spotify-modal {
+  background: $color-surface;
+  border: 1px solid $color-border-light;
+  border-radius: $radius;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid $color-border;
+  }
+
+  &__title {
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    color: $color-muted;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: $radius-xs;
+    transition: color 0.15s, background 0.15s;
+
+    &:hover { color: $color-text; background: $color-surface-2; }
+  }
+
+  &__hint {
+    padding: 14px 18px 6px;
+    font-size: 13px;
+    color: $color-muted;
+    line-height: 1.5;
+
+    strong { color: $color-text; }
+  }
+
+  &__input-row {
+    display: flex;
+    gap: 8px;
+    padding: 10px 18px;
+  }
+
+  &__input {
+    flex: 1;
+    background: $color-surface-2;
+    border: 1.5px solid $color-border;
+    border-radius: $radius-sm;
+    color: $color-text;
+    font-size: 13px;
+    font-family: $font;
+    padding: 8px 12px;
+    outline: none;
+
+    &::placeholder { color: $color-muted; }
+    &:focus { border-color: $color-spotify; }
+  }
+
+  &__footer {
+    padding: 10px 18px 16px;
+    font-size: 11px;
+    line-height: 1.6;
+
+    code {
+      font-family: $font-mono;
+      background: $color-surface-2;
+      padding: 1px 4px;
+      border-radius: $radius-xs;
+    }
+  }
+}
+
+.spotify-icon {
+  color: $color-spotify;
+}
+
+.spotify-preview {
+  margin: 0 18px 4px;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  overflow: hidden;
+
+  &__summary {
+    padding: 8px 12px;
+    font-size: 13px;
+    background: $color-surface-2;
+    border-bottom: 1px solid $color-border;
+  }
+
+  &__list {
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  &__track {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
+    border-bottom: 1px solid $color-border;
+
+    &:last-child { border-bottom: none; }
+  }
+
+  &__art {
+    width: 32px;
+    height: 32px;
+    border-radius: $radius-xs;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__title {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__artist {
+    font-size: 11px;
+    color: $color-muted;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__dur {
+    font-size: 11px;
+    font-family: $font-mono;
+    flex-shrink: 0;
+  }
+
+  &__more {
+    padding: 8px 12px;
+    font-size: 11px;
+    text-align: center;
+    background: $color-surface-2;
+  }
+
+  &__confirm {
+    width: calc(100% - 2px);
+    margin: 0;
+    border-radius: 0 0 $radius-xs $radius-xs;
+    padding: 10px;
+  }
+}
+
+// =========================================================
+// Loading overlay
+// =========================================================
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba($color-bg, 0.8);
+  backdrop-filter: blur(2px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 9999;
+
+  p {
+    font-size: 14px;
+    color: $color-muted;
+  }
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 2.5px solid $color-border-light;
+  border-top-color: $color-accent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// =========================================================
+// Utilities
+// =========================================================
+
+.muted { color: $color-muted; }
+
+// =========================================================
+// App header — route name
+// =========================================================
+
+.app-header__route-name {
+  font-size: 12px;
+  color: $color-muted;
+  margin-left: 4px;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// =========================================================
+// Wizard
+// =========================================================
+
+.wizard {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: $color-bg;
+  overflow: hidden;
+
+  &__header {
+    height: $header-h;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    border-bottom: 1px solid $color-border;
+    background: $color-surface;
+    flex-shrink: 0;
+  }
+
+  &__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+  }
+
+  &__brand-icon { color: $color-accent; }
+
+  &__steps {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__step-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: $color-border-light;
+    transition: background 0.2s, transform 0.2s;
+
+    &--active {
+      background: $color-accent;
+      transform: scale(1.3);
+    }
+
+    &--done { background: $color-success; }
+  }
+
+  &__body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 32px 24px;
+  }
+
+  &__step {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  &__step-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: $color-muted;
+  }
+
+  &__title {
+    font-size: 28px;
+    font-weight: 800;
+    color: $color-text;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+    margin: -4px 0 0;
+  }
+
+  &__sub {
+    font-size: 14px;
+    color: $color-muted;
+    margin-top: -8px;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+
+    .btn-secondary { flex-shrink: 0; }
+  }
+
+  &__next { flex: 1; }
+}
+
+.drop-zone--wizard {
+  padding: 36px;
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// =========================================================
+// Playlist choice (wizard step 3)
+// =========================================================
+
+.playlist-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &__selected {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: $color-surface-2;
+    border: 1.5px solid $color-success;
+    border-radius: $radius;
+  }
+
+  &__selected-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__selected-icon {
+    font-size: 20px;
+    color: $color-spotify;
+  }
+
+  &__selected-name {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  &__selected-count { font-size: 12px; }
+
+  &__divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: $color-muted;
+    font-size: 11px;
+
+    &::before, &::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: $color-border;
+    }
+  }
+
+  &__spotify-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 16px;
+    background: rgba($color-spotify, 0.06);
+    border: 1.5px solid rgba($color-spotify, 0.25);
+    border-radius: $radius;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s, border-color 0.15s;
+    color: $color-text;
+    font-family: $font;
+
+    &:hover {
+      background: rgba($color-spotify, 0.12);
+      border-color: rgba($color-spotify, 0.5);
+    }
+  }
+
+  &__spotify-icon {
+    font-size: 22px;
+    color: $color-spotify;
+    flex-shrink: 0;
+  }
+
+  &__spotify-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: $color-spotify;
+  }
+
+  &__spotify-sub {
+    font-size: 12px;
+    color: $color-muted;
+  }
+
+  &__arrow {
+    margin-left: auto;
+    color: $color-muted;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  &__demo-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 13px 16px;
+    background: $color-surface-2;
+    border: 1.5px solid $color-border;
+    border-radius: $radius;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: $font;
+    color: $color-text;
+    transition: background 0.15s, border-color 0.15s;
+
+    &:hover {
+      background: $color-surface-3;
+      border-color: $color-border-light;
+    }
+
+    &--default {
+      border-color: $color-accent;
+      background: rgba($color-accent, 0.05);
+    }
+  }
+}
+
+// =========================================================
+// Spotify Picker (modal, replaces SpotifyImport)
+// =========================================================
+
+.spotify-picker {
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+
+  .spotify-modal__header { flex-shrink: 0; }
+
+  &__body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 200px;
+  }
+
+  &__user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px 8px;
+    border-bottom: 1px solid $color-border;
+  }
+
+  &__avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  &__username {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  &__search-row {
+    padding: 10px 18px 6px;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 2px;
+    padding: 8px 18px 16px;
+  }
+}
+
+.spotify-pl-card {
+  display: flex;
+  flex-direction: column;
+  background: none;
+  border: none;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  text-align: left;
+  padding: 8px;
+  transition: background 0.12s;
+  font-family: $font;
+  color: $color-text;
+
+  &:hover { background: $color-surface-2; }
+  &:disabled { opacity: 0.5; cursor: wait; }
+
+  &--loading { opacity: 0.7; }
+
+  &__img {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: $radius-xs;
+    overflow: hidden;
+    background: $color-surface-2;
+    margin-bottom: 6px;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  }
+
+  &__img-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: $color-muted;
+  }
+
+  &__loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba($color-bg, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__name {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  &__count {
+    font-size: 10px;
+    margin-top: 2px;
+    font-family: $font-mono;
+  }
+}
+
+.spotify-modal__header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spotify-logout-btn {
+  background: none;
+  border: 1px solid $color-border-light;
+  border-radius: $radius-xs;
+  color: $color-muted;
+  font-size: 11px;
+  font-family: $font;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+
+  &:hover {
+    color: $color-danger;
+    border-color: $color-danger;
+  }
+}
+
+.spotify-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  gap: 10px;
+  text-align: center;
+  min-height: 220px;
+
+  &__icon {
+    font-size: 36px;
+    color: $color-spotify;
+    margin-bottom: 4px;
+  }
+
+  &__title {
+    font-size: 15px;
+    font-weight: 700;
+    color: $color-text;
+  }
+
+  &__sub {
+    font-size: 13px;
+    color: $color-muted;
+    max-width: 320px;
+    line-height: 1.5;
+
+    code {
+      font-family: $font-mono;
+      background: $color-surface-2;
+      padding: 1px 4px;
+      border-radius: $radius-xs;
+    }
+  }
+}
+
+.btn-spotify-connect {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: $color-spotify;
+  color: #000;
+  border: none;
+  border-radius: 24px;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: $font;
+  cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:hover { opacity: 0.9; }
+}
+
+.loading-spinner--sm {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+// =========================================================
+// Playlist panel — change button
+// =========================================================
+
+.playlist-panel__change-btn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid $color-border-light;
+  border-radius: $radius-xs;
+  color: $color-muted;
+  font-size: 10px;
+  font-family: $font;
+  padding: 2px 7px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+
+  &:hover {
+    color: $color-text;
+    border-color: $color-accent;
+  }
+}

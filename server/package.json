@@ -1,0 +1,25 @@
+{
+  "name": "run-soundtrack-server",
+  "version": "1.0.0",
+  "description": "Run Soundtrack backend server",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.1.0",
+    "@fastify/multipart": "^9.4.0",
+    "fast-xml-parser": "^4.4.1",
+    "fastify": "^5.12.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.0"
+  }
+}
