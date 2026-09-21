@@ -73,10 +73,3 @@ export function clearSpotifyTokens() {
   localStorage.removeItem("rs_spotify_session_v1");
 }
 
-// Keep old names as aliases so existing call-sites that haven't been updated yet compile
-/** @deprecated Use saveSpotifyTokens */
-export function saveSpotifySession(_key: string) { /* no-op, replaced by token storage */ }
-/** @deprecated Use loadSpotifyTokens */
-export function loadSpotifySession(): string | null { return localStorage.getItem(SPOTIFY_ACCESS_KEY); }
-/** @deprecated Use clearSpotifyTokens */
-export function clearSpotifySession() { clearSpotifyTokens(); }
