@@ -1,9 +1,8 @@
 import { useState, useRef } from "react";
 import type { Route, RunPlan, RunStrategy, Track } from "../types/domain";
 import { formatDistance, formatPace, formatTimeHMS, parseTimeToSeconds } from "../lib/format";
-import { buildRunPlan } from "../lib/engine";
+import { buildRunPlan, parseGpxClientSide, generateDemoRoute } from "../lib/engine";
 import { parseGpxFile } from "../lib/api";
-import { parseGpxClientSide } from "../lib/engine";
 import { demoPlaylist } from "../data/demoPlaylist";
 import SpotifyPicker from "./SpotifyPicker";
 
@@ -47,6 +46,15 @@ export default function Wizard({ onComplete }: WizardProps) {
     const frac = splitPercent / 100;
     startPace = strategy === "negative_split" ? avgPace * (1 + frac) : avgPace * (1 - frac);
     endPace   = strategy === "negative_split" ? avgPace * (1 - frac) : avgPace * (1 + frac);
+  }
+
+  // ── Demo route ───────────────────────────────────────────────────────────
+  function handleUseDemoRoute() {
+    const demo = generateDemoRoute();
+    setRoute(demo);
+    setRouteName("Berlin Demo Run");
+    setTargetTime(suggestTargetTime(demo));
+    setRouteError(null);
   }
 
   // ── GPX handlers ─────────────────────────────────────────────────────────
@@ -141,6 +149,14 @@ export default function Wizard({ onComplete }: WizardProps) {
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
 
             {routeError && <p className="error-text">{routeError}</p>}
+
+            <div className="wizard__demo-link">
+              <span className="muted">No GPX file? </span>
+              <button className="btn-link" onClick={handleUseDemoRoute}>
+                Use demo route
+              </button>
+              <span className="muted"> (10 km Berlin loop)</span>
+            </div>
 
             <div className="wizard__actions">
               <button
