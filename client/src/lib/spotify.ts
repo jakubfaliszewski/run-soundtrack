@@ -1,11 +1,6 @@
 /**
  * Client-side Spotify PKCE OAuth + API helpers.
- *
  * No server involvement — the browser handles the full auth flow.
- * Only VITE_SPOTIFY_CLIENT_ID is required (no client secret).
- *
- * Redirect URI must be registered in the Spotify developer dashboard:
- *   http://localhost:5173
  */
 
 import type { Track } from "../types/domain";
@@ -19,7 +14,7 @@ import {
 // Config
 // ---------------------------------------------------------------------------
 
-export const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID as string | undefined;
+export const CLIENT_ID = "52e7b5c8740247538201d358d4362577";
 const REDIRECT_URI = window.location.origin;
 const SCOPES = "playlist-read-private playlist-read-collaborative";
 

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Track } from "../types/domain";
 import {
-  CLIENT_ID,
   startLogin,
   logout,
   getProfile,
@@ -24,7 +23,7 @@ interface SpotifyPickerProps {
 }
 
 export default function SpotifyPicker({ onSelect, onClose }: SpotifyPickerProps) {
-  const configured = !!CLIENT_ID;
+  const configured = true; // CLIENT_ID is always set
 
   const [user, setUser] = useState<{ id: string; name: string; avatarUrl: string | null } | null>(null);
   const [playlists, setPlaylists] = useState<PlaylistItem[]>([]);
