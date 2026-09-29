@@ -4,7 +4,9 @@ import { formatDistance, formatPace, formatTimeHMS, parseTimeToSeconds } from ".
 import { buildRunPlan, parseGpxClientSide, generateDemoRoute } from "../lib/engine";
 import { parseGpxFile } from "../lib/api";
 import { demoPlaylist } from "../data/demoPlaylist";
+import { loadDraftPlaylist } from "../lib/storage";
 import SpotifyPicker from "./SpotifyPicker";
+import PlaylistBuilder from "./PlaylistBuilder";
 
 const WIZARD_DRAFT_KEY = "rs_wizard_draft";
 
@@ -46,6 +48,7 @@ export default function Wizard({ onComplete }: WizardProps) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [playlistName, setPlaylistName] = useState("");
   const [showSpotifyPicker, setShowSpotifyPicker] = useState(false);
+  const [showPlaylistBuilder, setShowPlaylistBuilder] = useState(false);
 
   // ── Restore draft on mount (after Spotify redirect) ──────────────────────
   useEffect(() => {
@@ -292,7 +295,7 @@ export default function Wizard({ onComplete }: WizardProps) {
         {step === "playlist" && (
           <div className="wizard__step">
             <div className="wizard__step-label">Step 3 of 3</div>
-            <h1 className="wizard__title">Choose your playlist</h1>
+            <h1 className="wizard__title">Choose your music</h1>
             <p className="wizard__sub">Pick the soundtrack for your run, or use the demo playlist to get started.</p>
 
             <div className="playlist-choice">
@@ -314,12 +317,24 @@ export default function Wizard({ onComplete }: WizardProps) {
                 >
                   <span className="playlist-choice__spotify-icon">♫</span>
                   <div>
-                    <div className="playlist-choice__spotify-label">Connect Spotify</div>
+                    <div className="playlist-choice__spotify-label">Existing Spotify playlist</div>
                     <div className="playlist-choice__spotify-sub">Pick from your personal playlists</div>
                   </div>
                   <span className="playlist-choice__arrow">→</span>
                 </button>
               )}
+
+              <button
+                className="playlist-choice__spotify-btn"
+                onClick={() => setShowPlaylistBuilder(true)}
+              >
+                <span className="playlist-choice__spotify-icon">+</span>
+                <div>
+                  <div className="playlist-choice__spotify-label">Create playlist</div>
+                  <div className="playlist-choice__spotify-sub">Search Spotify and build your own</div>
+                </div>
+                <span className="playlist-choice__arrow">→</span>
+              </button>
 
               <div className="playlist-choice__divider">
                 <span>{tracks.length > 0 ? "or" : "or continue with"}</span>
@@ -354,6 +369,19 @@ export default function Wizard({ onComplete }: WizardProps) {
           onSelect={(t, name) => { setTracks(t); setPlaylistName(name); setShowSpotifyPicker(false); }}
           onClose={() => setShowSpotifyPicker(false)}
           onBeforeLogin={() => saveDraft("playlist")}
+        />
+      )}
+
+      {showPlaylistBuilder && (
+        <PlaylistBuilder
+          initialDraft={loadDraftPlaylist()}
+          onGenerate={(builtTracks, builtName) => {
+            setTracks(builtTracks);
+            setPlaylistName(builtName);
+            setShowPlaylistBuilder(false);
+            handleFinish(builtTracks, builtName);
+          }}
+          onClose={() => setShowPlaylistBuilder(false)}
         />
       )}
     </div>

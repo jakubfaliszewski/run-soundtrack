@@ -18,10 +18,12 @@ No API keys required to run. Spotify integration is optional.
 - **Soundtrack calculation** — assigns songs sequentially to run time, converts time → distance → GPS coordinate for each song boundary
 - **Interactive map** — per-song coloured polylines, start/finish/transition markers, hover tooltips, click to select
 - **Timeline** — distance-proportional bar of all songs; click or hover to highlight the corresponding map segment
+- **In-app playlist builder** — search Spotify tracks, add/remove/reorder them into a custom playlist, see live duration, and save as a new Spotify playlist — all without leaving the app
 - **Spotify integration** — log in with Spotify (OAuth PKCE) to browse and select from your own playlists; or paste any public playlist URL (no login needed)
+- **Save to Spotify** — create a new private or public playlist directly from the builder with one click
 - **Demo playlist** — 25 tracks built in; app is fully usable without any Spotify account
 - **Offline fallback** — if the server is unreachable, all calculations run client-side
-- **LocalStorage persistence** — last uploaded route survives a page refresh
+- **LocalStorage persistence** — last uploaded route and current draft playlist survive a page refresh
 - **No database, no accounts** required
 
 ---
@@ -67,7 +69,13 @@ npm run dev:client   # terminal 2
 npm test
 ```
 
-27 unit tests covering haversine, GPX parsing, pace calculation, timed route, time→distance interpolation, GPS interpolation, and the full soundtrack engine.
+77 unit tests across three suites:
+
+| Suite | Tests | What it covers |
+|---|---|---|
+| `engine.test.ts` | 35 | Haversine, GPX parsing, pace calculation, timed route, time→distance interpolation, GPS interpolation, soundtrack engine |
+| `storage.test.ts` | 20 | Route, run plan, playlist, draft playlist, and Spotify token persistence |
+| `spotify.test.ts` | 22 | `SpotifyForbiddenError`, `hasWriteScopes`, `searchTracks` mapping, `createSpotifyPlaylist`, `addTracksToSpotifyPlaylist` |
 
 ---
 
@@ -75,7 +83,7 @@ npm test
 
 Spotify login is **fully client-side** using PKCE — no client secret, no server involvement for user auth.
 
-### User login (browse your private playlists)
+### User login (browse and build playlists)
 
 1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) and **create an app**.
 2. In your app settings, add this **Redirect URI**:
@@ -89,6 +97,21 @@ Spotify login is **fully client-side** using PKCE — no client secret, no serve
 4. Restart the Vite dev server (`npm run dev` in `client/`). The **"Log in with Spotify"** button will appear.
 
 The browser handles the full PKCE flow — no client secret is ever needed or exposed.
+
+### Scopes
+
+The app requests different OAuth scopes depending on what the user is doing:
+
+| Action | Scopes requested |
+|---|---|
+| Browse/import playlists | `playlist-read-private`, `playlist-read-collaborative` |
+| Save a built playlist to Spotify | + `playlist-modify-private`, `playlist-modify-public` |
+
+Write scopes are only requested when the user explicitly clicks **Save to Spotify**.
+
+### Developer Mode note
+
+Spotify apps in Development Mode can only make write API calls on behalf of users added under **Settings → User Management** in the Developer Dashboard. Add your Spotify username there if you encounter 403 errors when saving playlists.
 
 ### Public playlist URL import (no login)
 
@@ -105,6 +128,38 @@ The app works fine without any Spotify setup. The built-in demo playlist of 25 t
 
 ---
 
+## Playlist Builder
+
+The in-app playlist builder lets you construct a custom running playlist from scratch:
+
+```
+Create Playlist
+
+Name
+[ My Running Playlist ]
+
+Search Spotify                    Your playlist
+[ 🔍 Search tracks… ]
+                                  1. The Pretender        4:29
+The Pretender                     2. Hysteria              3:45
+Foo Fighters          [+]        3. Everlong              4:10
+4:29
+                                  ─────────────────────────────
+Everlong                          Total  12:24
+Foo Fighters          [+]
+4:10                              [ Save to Spotify ]
+                                  [ Generate soundtrack ]
+```
+
+- Debounced search (300 ms), up to 10 results per query
+- Drag-and-drop reorder, or use ↑ / ↓ buttons
+- Duplicate tracks allowed (same song can appear multiple times)
+- Live total duration with run-length warning
+- Draft auto-saved to `localStorage` — survives a page refresh
+- **Save to Spotify** creates a new playlist (private by default) and adds all tracks in the current order
+
+---
+
 ## Architecture
 
 ```
@@ -118,7 +173,7 @@ GPX file
                                 └─▶ Map + Timeline + Playlist Panel
 ```
 
-The **Soundtrack Engine** is a pure function — it receives `Route`, `TimedRoute`, and `Track[]`. It has no knowledge of Spotify, GPX, or React. This separation is intentional and must be preserved.
+The **Soundtrack Engine** is a pure function — it receives `Route`, `TimedRoute`, and `Track[]`. It has no knowledge of Spotify, GPX, or React. Tracks from an imported playlist, the demo, or the in-app builder are all identical from the engine's perspective.
 
 ### Module map
 
@@ -130,22 +185,37 @@ The **Soundtrack Engine** is a pure function — it receives `Route`, `TimedRout
 | `server/src/routes/route.ts` | `POST /api/routes/parse`, `POST /api/soundtrack` |
 | `server/src/routes/spotify.ts` | Public playlist import endpoint (client credentials) |
 | `client/src/lib/engine.ts` | Client-side mirror of the engine (offline fallback) |
-| `client/src/lib/spotify.ts` | Client-side PKCE auth + Spotify API calls |
+| `client/src/lib/spotify.ts` | PKCE auth + Spotify API: search, create playlist, add tracks |
 | `client/src/lib/api.ts` | Server API calls (GPX parse, soundtrack, public playlist import) |
-| `client/src/lib/storage.ts` | LocalStorage: route + Spotify token persistence |
-| `client/src/components/Wizard.tsx` | Onboarding flow (GPX → pace → playlist) |
+| `client/src/lib/storage.ts` | LocalStorage: route, run plan, playlist, draft playlist, tokens |
+| `client/src/components/Wizard.tsx` | Onboarding flow (GPX → pace → playlist choice) |
+| `client/src/components/PlaylistBuilder.tsx` | In-app playlist builder (search, edit, save to Spotify) |
 | `client/src/components/MapView.tsx` | Leaflet map with segments, markers, tooltips |
 | `client/src/components/SpotifyPicker.tsx` | Spotify login + playlist grid |
+| `client/src/components/PlaylistPanel.tsx` | Active playlist panel with Change / Build actions |
 | `client/src/components/Timeline.tsx` | Distance-proportional timeline bar |
 
 ### Domain types
 
 ```ts
-type Route = { points: RoutePoint[]; totalDistanceMeters: number; elevationGainMeters?: number };
+type Track = {
+  id: string;
+  title: string;
+  artist: string;
+  durationSeconds: number;
+  source?: "demo" | "spotify";
+  provider?: "demo" | "spotify";
+  providerTrackId?: string;       // Spotify track ID
+  spotifyUri?: string;            // e.g. "spotify:track:abc123"
+  artworkUrl?: string;
+  externalId?: string;
+};
 
-type RunPlan = { targetTimeSeconds: number; strategy: RunStrategy; startPaceSecondsPerKm: number; endPaceSecondsPerKm: number };
-
-type Track = { id: string; title: string; artist: string; durationSeconds: number; source?: "demo" | "spotify"; externalId?: string };
+type DraftPlaylist = {
+  id: string;
+  name: string;
+  tracks: Track[];
+};
 
 type SoundtrackSegment = {
   track: Track;
@@ -175,7 +245,7 @@ Returns `{ timedRoute, soundtrack }`.
 
 Fetches a **public** playlist by URL using server-side Client Credentials. Requires `SPOTIFY_CLIENT_ID` + `SPOTIFY_CLIENT_SECRET` in `server/.env`.
 
-> User login (OAuth PKCE) is handled entirely in the browser via `client/src/lib/spotify.ts` — no server endpoints involved.
+> User login (OAuth PKCE) and the playlist builder (search, create, add tracks) are handled entirely in the browser via `client/src/lib/spotify.ts` — no server endpoints involved.
 
 ---
 

@@ -1,50 +1,68 @@
-# React + TypeScript + Vite
+# Run Soundtrack — Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript + Vite frontend for Run Soundtrack.
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+# From the repo root
+npm run dev          # starts both client and server
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+# Or client only
+npm run dev:client
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+Dev server runs at **http://localhost:5173**.
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+## Tests
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+```bash
+cd client
+npx vitest run
+```
+
+77 unit tests across three suites — engine, storage, and Spotify service.
+
+## Environment variables
+
+Create `client/.env.local` (not committed):
+
+```bash
+# Required for Spotify login and the in-app playlist builder
+VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id
+```
+
+Without this the app still works — the demo playlist and the server-side public URL import remain available.
+
+## Source layout
+
+```
+src/
+├── components/
+│   ├── PlaylistBuilder.tsx   In-app playlist builder (search, edit, save to Spotify)
+│   ├── SpotifyPicker.tsx     Spotify login + playlist grid
+│   ├── Wizard.tsx            Onboarding: GPX → pace → playlist
+│   ├── MapView.tsx           Leaflet map
+│   ├── PlaylistPanel.tsx     Active playlist panel
+│   ├── Timeline.tsx          Distance timeline bar
+│   ├── RunSetup.tsx          Pace/route editor overlay
+│   ├── RunSummary.tsx        Summary stats
+│   └── TrackItem.tsx         Single track row
+├── lib/
+│   ├── engine.ts             Soundtrack engine (client-side mirror)
+│   ├── spotify.ts            PKCE auth + Spotify API calls
+│   ├── storage.ts            localStorage helpers
+│   ├── api.ts                Server API calls
+│   ├── format.ts             Time/distance/pace formatting
+│   └── __tests__/            Vitest test suites
+├── data/
+│   └── demoPlaylist.ts       25 built-in tracks
+└── types/
+    └── domain.ts             Shared domain types (Track, Route, DraftPlaylist, …)
+```
+
+## TypeScript
+
+```bash
+cd client && npx tsc --noEmit
 ```
