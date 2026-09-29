@@ -258,7 +258,7 @@ export default function Wizard({ onComplete }: WizardProps) {
                     <label className="split-label">
                       Split intensity
                       <div className="split-row">
-                        <input type="range" min="5" max="30" step="5" value={splitPercent}
+                        <input type="range" min="1" max="25" step="1" value={splitPercent}
                           onChange={(e) => setSplitPercent(parseInt(e.target.value))} className="split-slider" />
                         <span className="split-value">{splitPercent}%</span>
                       </div>

@@ -117,10 +117,10 @@ export default function App() {
   // ---------------------------------------------------------------------------
   // RunSetup submit (editing an existing run)
   // ---------------------------------------------------------------------------
-  const handleSetupStart = useCallback(async (route: Route, plan: RunPlan) => {
+  const handleSetupStart = useCallback(async (route: Route, routeName: string, plan: RunPlan) => {
     if (!appState) return;
     setLoading(true);
-    saveRoute(route, appState.routeName);
+    saveRoute(route, routeName);
     saveRunPlan(plan);
     try {
       let timedRoute: TimedRoute;
@@ -134,7 +134,7 @@ export default function App() {
         soundtrack = buildSoundtrack(route, timedRoute, appState.playlist);
       }
       setAppState((s) => s ? {
-        ...s, route, runPlan: plan,
+        ...s, route, routeName, runPlan: plan,
         timedRoute, soundtrack,
         selectedTrackId: null, hoveredTrackId: null,
       } : null);
@@ -232,6 +232,7 @@ export default function App() {
             onStart={handleSetupStart}
             loading={loading}
             initialRoute={route}
+            initialRouteName={routeName}
           />
         </div>
       ) : (
