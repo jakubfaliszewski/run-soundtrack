@@ -1,10 +1,11 @@
-import type { Route, RunPlan, Track } from "../types/domain";
+import type { Route, RunPlan, Track, DraftPlaylist } from "../types/domain";
 
 const ROUTE_KEY = "rs_route_v1";
 const ROUTE_NAME_KEY = "rs_route_name_v1";
 const RUN_PLAN_KEY = "rs_run_plan_v1";
 const PLAYLIST_KEY = "rs_playlist_v1";
 const PLAYLIST_NAME_KEY = "rs_playlist_name_v1";
+const DRAFT_PLAYLIST_KEY = "rs_draft_playlist_v1";
 const SPOTIFY_ACCESS_KEY = "rs_spotify_access_v1";
 const SPOTIFY_REFRESH_KEY = "rs_spotify_refresh_v1";
 const SPOTIFY_EXPIRES_KEY = "rs_spotify_expires_v1";
@@ -104,6 +105,26 @@ export function loadSpotifyTokens(): {
   const expiresAt = Number(localStorage.getItem(SPOTIFY_EXPIRES_KEY) ?? "0");
   if (!accessToken || !refreshToken) return null;
   return { accessToken, refreshToken, expiresAt };
+}
+
+// ---------------------------------------------------------------------------
+// Draft playlist persistence
+// ---------------------------------------------------------------------------
+
+export function saveDraftPlaylist(draft: DraftPlaylist) {
+  try { localStorage.setItem(DRAFT_PLAYLIST_KEY, JSON.stringify(draft)); } catch { /* ignore */ }
+}
+
+export function loadDraftPlaylist(): DraftPlaylist | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_PLAYLIST_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as DraftPlaylist;
+  } catch { return null; }
+}
+
+export function clearDraftPlaylist() {
+  localStorage.removeItem(DRAFT_PLAYLIST_KEY);
 }
 
 export function clearSpotifyTokens() {

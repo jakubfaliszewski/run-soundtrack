@@ -21,7 +21,20 @@ npm run dev
 npm test
 ```
 
-All 27 unit tests live in `server/src/services/__tests__/engine.test.ts` and cover the pure calculation functions — haversine, GPX parsing, pace, timed route, interpolation, and soundtrack engine.
+77 unit tests across three suites:
+
+| Suite | File | What it covers |
+|---|---|---|
+| Engine | `client/src/lib/__tests__/engine.test.ts` | Haversine, GPX parsing, pace calculation, timed route, interpolation, soundtrack engine |
+| Storage | `client/src/lib/__tests__/storage.test.ts` | Route, run plan, playlist, draft playlist, and Spotify token persistence |
+| Spotify | `client/src/lib/__tests__/spotify.test.ts` | `SpotifyForbiddenError`, `hasWriteScopes`, `searchTracks`, `createSpotifyPlaylist`, `addTracksToSpotifyPlaylist` |
+
+Run TypeScript checks before opening a PR:
+
+```bash
+cd client && npx tsc --noEmit
+cd server && npx tsc --noEmit
+```
 
 ## Project structure
 
@@ -30,7 +43,12 @@ run-soundtrack/
 ├── client/               React + Vite frontend
 │   └── src/
 │       ├── components/   UI components
-│       ├── lib/          engine.ts (calculations), api.ts, storage.ts, format.ts
+│       │   ├── PlaylistBuilder.tsx   ← in-app playlist builder
+│       │   ├── SpotifyPicker.tsx     ← Spotify login + playlist grid
+│       │   ├── Wizard.tsx            ← onboarding flow
+│       │   └── ...
+│       ├── lib/          engine.ts, api.ts, storage.ts, spotify.ts, format.ts
+│       │   └── __tests__/
 │       ├── data/         demoPlaylist.ts
 │       └── types/        domain.ts
 └── server/               Fastify backend
@@ -41,12 +59,28 @@ run-soundtrack/
         └── types/        domain.ts
 ```
 
-## Key architectural rule
+## Key architectural rules
 
-The **soundtrack engine** (`soundtrackEngine.ts`) must never depend on where the playlist came from. It receives `Track[]` and returns `Soundtrack`. Keep it that way.
+**1. The soundtrack engine receives only `Track[]`.**
+It must never know where the playlist came from — Spotify import, demo, or the in-app builder. Keep it that way.
+
+**2. Spotify write calls stay client-side.**
+`createSpotifyPlaylist` and `addTracksToSpotifyPlaylist` call the Spotify Web API directly from the browser using the user's PKCE token. Do not route these through the server.
+
+**3. Draft playlist state lives in `localStorage` only.**
+No server-side playlist entity. `saveDraftPlaylist` / `loadDraftPlaylist` in `storage.ts` are the only persistence layer.
+
+**4. Write scopes are opt-in.**
+`startLogin(withWriteScopes = false)` — only pass `true` when the user explicitly attempts to save to Spotify. Do not request `playlist-modify-*` for search or import.
+
+## Spotify API notes
+
+- Track search: `GET /v1/search?type=track&q=…&limit=10`
+- Create playlist: `POST /v1/me/playlists` (body: JSON)
+- Add tracks: `POST /v1/playlists/{id}/items?uris=…` (URIs as comma-separated query parameter — the `/tracks` endpoint was removed by Spotify in February 2026)
 
 ## Pull requests
 
 - Keep changes focused and minimal.
-- Add or update tests for any calculation logic changes.
-- Run `npm test` and `npx tsc --noEmit` in both `client/` and `server/` before opening a PR.
+- Add or update tests for any calculation or service logic changes.
+- Run `npm test` and both `tsc --noEmit` checks before opening a PR.

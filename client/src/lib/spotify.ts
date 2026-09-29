@@ -19,7 +19,8 @@ export const CLIENT_ID = "52e7b5c8740247538201d358d4362577";
 // Must exactly match a URI registered in the Spotify developer dashboard.
 // Registered: http://127.0.0.1:5173
 const REDIRECT_URI = window.location.origin.replace("localhost", "127.0.0.1");
-const SCOPES = "playlist-read-private playlist-read-collaborative";
+const SCOPES_READ = "playlist-read-private playlist-read-collaborative";
+const SCOPES_WRITE = "playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public";
 
 const VERIFIER_KEY = "rs_spotify_pkce_verifier";
 
@@ -46,7 +47,7 @@ async function sha256Base64url(str: string): Promise<string> {
 // ---------------------------------------------------------------------------
 
 /** Kick off PKCE login — redirects the browser to Spotify. */
-export async function startLogin(): Promise<void> {
+export async function startLogin(withWriteScopes = false): Promise<void> {
   if (!CLIENT_ID) throw new Error("VITE_SPOTIFY_CLIENT_ID is not set.");
   const verifier = randomBase64url(32);
   const challenge = await sha256Base64url(verifier);
@@ -55,7 +56,7 @@ export async function startLogin(): Promise<void> {
   const params = new URLSearchParams({
     response_type: "code",
     client_id: CLIENT_ID,
-    scope: SCOPES,
+    scope: withWriteScopes ? SCOPES_WRITE : SCOPES_READ,
     redirect_uri: REDIRECT_URI,
     code_challenge_method: "S256",
     code_challenge: challenge,
@@ -95,8 +96,11 @@ export async function handleCallback(code: string): Promise<boolean> {
     access_token: string;
     refresh_token: string;
     expires_in: number;
+    scope: string;
   };
   saveSpotifyTokens(data.access_token, data.refresh_token, data.expires_in);
+  // Persist the granted scopes so hasWriteScopes() can check them without a network call
+  try { localStorage.setItem("rs_spotify_scope_v1", data.scope ?? ""); } catch { /* ignore */ }
   return true;
 }
 
@@ -141,18 +145,116 @@ async function getToken(): Promise<string | null> {
 
 export function logout(): void {
   clearSpotifyTokens();
+  try { localStorage.removeItem("rs_spotify_scope_v1"); } catch { /* ignore */ }
+}
+
+/** Thrown when a Spotify API call returns 403 (insufficient scope). */
+export class SpotifyForbiddenError extends Error {
+  constructor(public readonly reason = "insufficient_scope") {
+    super(reason);
+    this.name = "SpotifyForbiddenError";
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Spotify API calls (browser → api.spotify.com directly)
 // ---------------------------------------------------------------------------
 
-async function apiFetch(path: string): Promise<Response> {
+async function apiFetch(
+  path: string,
+  options?: { method?: string; body?: unknown },
+): Promise<Response> {
   const token = await getToken();
   if (!token) throw new Error("Not authenticated with Spotify.");
+  const isWrite = options?.method && options.method !== "GET";
   return fetch(`https://api.spotify.com/v1${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    method: options?.method ?? "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(isWrite ? { "Content-Type": "application/json" } : {}),
+    },
+    body: isWrite && options?.body !== undefined ? JSON.stringify(options.body) : undefined,
   });
+}
+
+/** Returns true if the stored token has the write scopes we need. */
+export function hasWriteScopes(): boolean {
+  // We infer write scope from the stored "scope" field (saved during token exchange).
+  // As a lightweight proxy: check if the stored scope string contains the write scope.
+  const raw = localStorage.getItem("rs_spotify_scope_v1");
+  if (!raw) return false;
+  return raw.includes("playlist-modify-private");
+}
+
+/** Search Spotify tracks. Returns up to 10 results. */
+export async function searchTracks(query: string): Promise<import("../types/domain").Track[]> {
+  const params = new URLSearchParams({ q: query, type: "track", limit: "10" });
+  const res = await apiFetch(`/search?${params}`);
+  if (!res.ok) throw new Error("Spotify search failed.");
+  const data = await res.json() as {
+    tracks: {
+      items: Array<{
+        id: string;
+        name: string;
+        uri: string;
+        duration_ms: number;
+        artists: Array<{ name: string }>;
+        album: { name: string; images: Array<{ url: string }> };
+      }>;
+    };
+  };
+  return data.tracks.items.map((t) => ({
+    id: t.id,
+    title: t.name,
+    artist: t.artists[0]?.name ?? "Unknown",
+    durationSeconds: Math.floor(t.duration_ms / 1000),
+    artworkUrl: t.album.images[0]?.url,
+    source: "spotify" as const,
+    provider: "spotify" as const,
+    externalId: t.id,
+    providerTrackId: t.id,
+    spotifyUri: t.uri,
+  }));
+}
+
+/**
+ * Create a new Spotify playlist in the current user's account.
+ * Returns { id, url } of the created playlist.
+ */
+export async function createSpotifyPlaylist(
+  name: string,
+  isPublic: boolean,
+): Promise<{ id: string; url: string }> {
+  const res = await apiFetch(`/me/playlists`, {
+    method: "POST",
+    body: { name, public: isPublic, description: "Created with Run Soundtrack" },
+  });
+  if (res.status === 403) throw new SpotifyForbiddenError();
+  if (!res.ok) throw new Error("Could not create the Spotify playlist.");
+  const data = await res.json() as { id: string; external_urls: { spotify: string } };
+  return { id: data.id, url: data.external_urls.spotify };
+}
+
+/**
+ * Add tracks to an existing Spotify playlist.
+ * Sends all URIs in a single request (Spotify supports up to 100 per call).
+ */
+export async function addTracksToSpotifyPlaylist(
+  playlistId: string,
+  trackUris: string[],
+): Promise<void> {
+  // Use /items endpoint (current); /tracks was removed by Spotify in Feb 2026.
+  // URIs are sent as a comma-separated query parameter, not a JSON body.
+  const uriParam = trackUris.slice(0, 100).map(encodeURIComponent).join(",");
+  const res = await apiFetch(`/playlists/${playlistId}/items?uris=${uriParam}`, {
+    method: "POST",
+  });
+  if (res.status === 403) {
+    const body = await res.json().catch(() => ({})) as { error?: { message?: string } };
+    const msg = body?.error?.message ?? "Forbidden";
+    throw new SpotifyForbiddenError(msg);
+  }
+  if (!res.ok) throw new Error("Could not add tracks to the Spotify playlist.");
 }
 
 export async function getProfile(): Promise<{ id: string; name: string; avatarUrl: string | null }> {

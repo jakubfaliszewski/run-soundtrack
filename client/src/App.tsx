@@ -3,13 +3,14 @@ import type { Route, RunPlan, TimedRoute, Soundtrack, Track } from "./types/doma
 import { buildTimedRoute, buildSoundtrack } from "./lib/engine";
 import { calculateSoundtrack } from "./lib/api";
 import { handleCallback as spotifyHandleCallback } from "./lib/spotify";
-import { saveRoute, saveRunPlan, savePlaylist, loadRoute, loadRunPlan, loadPlaylist } from "./lib/storage";
+import { saveRoute, saveRunPlan, savePlaylist, loadRoute, loadRunPlan, loadPlaylist, loadDraftPlaylist } from "./lib/storage";
 import Wizard from "./components/Wizard";
 import MapView from "./components/MapView";
 import PlaylistPanel from "./components/PlaylistPanel";
 import Timeline from "./components/Timeline";
 import RunSummary from "./components/RunSummary";
 import SpotifyPicker from "./components/SpotifyPicker";
+import PlaylistBuilder from "./components/PlaylistBuilder";
 import RunSetup from "./components/RunSetup";
 
 // ---------------------------------------------------------------------------
@@ -39,6 +40,7 @@ export default function App() {
   // UI overlays
   const [showSetup, setShowSetup] = useState(false);
   const [showSpotify, setShowSpotify] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
 
   // ---------------------------------------------------------------------------
   // On mount: restore persisted state, then handle Spotify callback
@@ -174,13 +176,14 @@ export default function App() {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        if (showSpotify) setShowSpotify(false);
+        if (showBuilder) setShowBuilder(false);
+        else if (showSpotify) setShowSpotify(false);
         else if (showSetup) setShowSetup(false);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [showSetup, showSpotify]);
+  }, [showSetup, showSpotify, showBuilder]);
 
   // ---------------------------------------------------------------------------
   // Show wizard if no state yet
@@ -266,6 +269,7 @@ export default function App() {
                 onSelectTrack={selectTrack}
                 onHoverTrack={hoverTrack}
                 onChangePlaylist={() => setShowSpotify(true)}
+                onCreatePlaylist={() => setShowBuilder(true)}
               />
             </div>
           </div>
@@ -287,6 +291,18 @@ export default function App() {
         <SpotifyPicker
           onSelect={handlePlaylistChange}
           onClose={() => setShowSpotify(false)}
+        />
+      )}
+
+      {showBuilder && (
+        <PlaylistBuilder
+          initialDraft={loadDraftPlaylist()}
+          runDurationSeconds={appState.runPlan.targetTimeSeconds}
+          onGenerate={(tracks, name) => {
+            handlePlaylistChange(tracks, name);
+            setShowBuilder(false);
+          }}
+          onClose={() => setShowBuilder(false)}
         />
       )}
 

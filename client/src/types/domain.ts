@@ -23,6 +23,18 @@ export type Track = {
   artworkUrl?: string;
   source?: "demo" | "spotify";
   externalId?: string;
+  /** Canonical provider field (used by playlist builder) */
+  provider?: "demo" | "spotify";
+  /** Spotify track ID */
+  providerTrackId?: string;
+  /** Spotify URI (e.g. "spotify:track:xxx") — required for playlist creation */
+  spotifyUri?: string;
+};
+
+export type DraftPlaylist = {
+  id: string;
+  name: string;
+  tracks: Track[];
 };
 
 export type RunStrategy = "even" | "negative_split" | "positive_split";
