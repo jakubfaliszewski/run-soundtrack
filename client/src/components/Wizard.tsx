@@ -375,6 +375,8 @@ export default function Wizard({ onComplete }: WizardProps) {
       {showPlaylistBuilder && (
         <PlaylistBuilder
           initialDraft={loadDraftPlaylist()}
+          routeName={routeName}
+          runDurationSeconds={targetSecs ?? undefined}
           onGenerate={(builtTracks, builtName) => {
             setTracks(builtTracks);
             setPlaylistName(builtName);

@@ -73,6 +73,12 @@ No server-side playlist entity. `saveDraftPlaylist` / `loadDraftPlaylist` in `st
 **4. Write scopes are opt-in.**
 `startLogin(withWriteScopes = false)` — only pass `true` when the user explicitly attempts to save to Spotify. Do not request `playlist-modify-*` for search or import.
 
+## Theming
+
+All colours are CSS custom properties defined on `:root` (dark) and `[data-theme="light"]`. The Sass `$color-*` variables are thin aliases to `var(--color-*)`, so every existing selector works unchanged with both themes. The active theme is stored in `localStorage` under `rs_theme_v1` and applied with `data-theme` on `<html>` before first paint to avoid flash.
+
+To add a new colour token, add it to both the `:root` and `[data-theme="light"]` blocks at the top of `client/src/index.scss`.
+
 ## Spotify API notes
 
 - Track search: `GET /v1/search?type=track&q=…&limit=10`

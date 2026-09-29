@@ -11,6 +11,7 @@ interface PlaylistPanelProps {
   onHoverTrack: (id: string | null) => void;
   onChangePlaylist?: () => void;
   onCreatePlaylist?: () => void;
+  onEditPlaylist?: () => void;
 }
 
 export default function PlaylistPanel({
@@ -21,6 +22,7 @@ export default function PlaylistPanel({
   onHoverTrack,
   onChangePlaylist,
   onCreatePlaylist,
+  onEditPlaylist,
 }: PlaylistPanelProps) {
   const diff = soundtrack.playlistDurationSeconds - soundtrack.runDurationSeconds;
   const isPlaylistShort = diff < 0;
@@ -43,6 +45,11 @@ export default function PlaylistPanel({
         {onCreatePlaylist && (
           <button className="playlist-panel__change-btn" onClick={onCreatePlaylist}>
             Build
+          </button>
+        )}
+        {onEditPlaylist && (
+          <button className="playlist-panel__change-btn" onClick={onEditPlaylist}>
+            Edit
           </button>
         )}
         {onChangePlaylist && (

@@ -7,14 +7,32 @@ interface RunSummaryProps {
   soundtrack: Soundtrack;
   playlistSource: "demo" | "spotify";
   onImportSpotify: () => void;
+  onSelectTrack?: (id: string) => void;
 }
 
-export default function RunSummary({ route, plan, soundtrack, playlistSource, onImportSpotify }: RunSummaryProps) {
+export default function RunSummary({ route, plan, soundtrack, playlistSource, onImportSpotify, onSelectTrack }: RunSummaryProps) {
   const diff = soundtrack.playlistDurationSeconds - soundtrack.runDurationSeconds;
   const absDiff = Math.abs(diff);
   const avgPace = plan.startPaceSecondsPerKm === plan.endPaceSecondsPerKm
     ? plan.startPaceSecondsPerKm
     : (plan.startPaceSecondsPerKm + plan.endPaceSecondsPerKm) / 2;
+
+  // §15 — start/finish tracks
+  const startSeg = soundtrack.segments[0] ?? null;
+
+  // Finish segment = last segment that starts before the run ends.
+  // Use the existing engine's segments directly — no new logic.
+  const finishSeg = (() => {
+    const runEnd = soundtrack.runDurationSeconds;
+    for (let i = soundtrack.segments.length - 1; i >= 0; i--) {
+      if (soundtrack.segments[i].startTimeSeconds < runEnd) {
+        return soundtrack.segments[i];
+      }
+    }
+    return soundtrack.segments[soundtrack.segments.length - 1] ?? null;
+  })();
+
+  const playlistEndsBeforeRun = soundtrack.playlistDurationSeconds < soundtrack.runDurationSeconds;
 
   return (
     <div className="run-summary">
@@ -49,6 +67,50 @@ export default function RunSummary({ route, plan, soundtrack, playlistSource, on
           </span>
         )}
       </div>
+
+      {/* §15 — start / finish track summary */}
+      {startSeg && (
+        <div className="summary-track-bookmarks">
+          <button
+            className="summary-bookmark"
+            onClick={() => onSelectTrack?.(startSeg.track.id)}
+          >
+            <span className="summary-bookmark__label">START</span>
+            <span className="summary-bookmark__icon">🎵</span>
+            <div className="summary-bookmark__info">
+              <span className="summary-bookmark__title">{startSeg.track.title}</span>
+              <span className="summary-bookmark__artist muted">{startSeg.track.artist}</span>
+            </div>
+          </button>
+
+          <div className="summary-bookmark-divider" />
+
+          {finishSeg && !playlistEndsBeforeRun ? (
+            <button
+              className="summary-bookmark"
+              onClick={() => onSelectTrack?.(finishSeg.track.id)}
+            >
+              <span className="summary-bookmark__label">FINISH</span>
+              <span className="summary-bookmark__icon">🏁</span>
+              <div className="summary-bookmark__info">
+                <span className="summary-bookmark__title">{finishSeg.track.title}</span>
+                <span className="summary-bookmark__artist muted">{finishSeg.track.artist}</span>
+              </div>
+            </button>
+          ) : (
+            <div className="summary-bookmark summary-bookmark--empty">
+              <span className="summary-bookmark__label">FINISH</span>
+              <span className="summary-bookmark__icon muted">—</span>
+              <div className="summary-bookmark__info">
+                <span className="summary-bookmark__title muted">No track</span>
+                <span className="summary-bookmark__artist muted">
+                  Playlist ends {formatTime(absDiff)} before finish
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="summary-playlist">
         <div className="summary-playlist__row">
