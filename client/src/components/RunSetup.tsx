@@ -6,9 +6,10 @@ import { parseGpxFile } from "../lib/api";
 import { parseGpxClientSide } from "../lib/engine";
 
 interface RunSetupProps {
-  onStart: (route: Route, plan: RunPlan) => void;
+  onStart: (route: Route, routeName: string, plan: RunPlan) => void;
   loading: boolean;
   initialRoute?: Route | null;
+  initialRouteName?: string;
 }
 
 /** Suggest a target time: assume 5:30/km average as starting hint */
@@ -17,9 +18,9 @@ function suggestTargetTime(route: Route): string {
   return formatTimeHMS(secs);
 }
 
-export default function RunSetup({ onStart, loading, initialRoute }: RunSetupProps) {
+export default function RunSetup({ onStart, loading, initialRoute, initialRouteName }: RunSetupProps) {
   const [route, setRoute] = useState<Route | null>(initialRoute ?? null);
-  const [filename, setFilename] = useState<string | null>(null);
+  const [filename, setFilename] = useState<string | null>(initialRouteName ?? null);
   const [routeError, setRouteError] = useState<string | null>(null);
   const [targetTime, setTargetTime] = useState(
     initialRoute ? suggestTargetTime(initialRoute) : "00:50:00"
@@ -82,7 +83,7 @@ export default function RunSetup({ onStart, loading, initialRoute }: RunSetupPro
     e.preventDefault();
     if (!route || !targetSecs) return;
     const plan = buildRunPlan(route.totalDistanceMeters, targetSecs, strategy, splitPercent / 100);
-    onStart(route, plan);
+    onStart(route, filename ?? "My Route", plan);
   }
 
   return (
@@ -186,9 +187,9 @@ export default function RunSetup({ onStart, loading, initialRoute }: RunSetupPro
                 <div className="split-row">
                   <input
                     type="range"
-                    min="5"
-                    max="30"
-                    step="5"
+                    min="1"
+                    max="25"
+                    step="1"
                     value={splitPercent}
                     onChange={(e) => setSplitPercent(parseInt(e.target.value))}
                     className="split-slider"
