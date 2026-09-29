@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useLayoutEffect } from "react";
 import type { Route, RunPlan, TimedRoute, Soundtrack, Track } from "./types/domain";
 import { buildTimedRoute, buildSoundtrack } from "./lib/engine";
 import { calculateSoundtrack } from "./lib/api";
@@ -33,14 +33,31 @@ type AppState = {
 // App
 // ---------------------------------------------------------------------------
 
+const THEME_KEY = "rs_theme_v1";
+
 export default function App() {
   const [appState, setAppState] = useState<AppState | null>(null);
   const [loading, setLoading] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">(() =>
+    (localStorage.getItem(THEME_KEY) as "dark" | "light") ?? "dark"
+  );
+
+  // Apply theme attribute before first paint to avoid flash
+  useLayoutEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    setTheme((t) => (t === "dark" ? "light" : "dark"));
+  }
 
   // UI overlays
   const [showSetup, setShowSetup] = useState(false);
   const [showSpotify, setShowSpotify] = useState(false);
-  const [showBuilder, setShowBuilder] = useState(false);
+  // showBuilder: false | "new" | "edit"
+  // "edit" means initialise the builder with the current active playlist (§12)
+  const [showBuilder, setShowBuilder] = useState<false | "new" | "edit">(false);
 
   // ---------------------------------------------------------------------------
   // On mount: restore persisted state, then handle Spotify callback
@@ -191,6 +208,13 @@ export default function App() {
   if (!appState) {
     return (
       <>
+        <button
+          className="btn-theme-toggle btn-theme-toggle--wizard"
+          onClick={toggleTheme}
+          title="Toggle light/dark mode"
+        >
+          {theme === "dark" ? "☀" : "☾"}
+        </button>
         <Wizard onComplete={(route, routeName, plan, tracks) =>
           handleWizardComplete(route, routeName, plan, tracks, "Playlist")
         } />
@@ -219,6 +243,9 @@ export default function App() {
           <span className="app-header__route-name">{routeName}</span>
         </div>
         <div className="app-header__actions">
+          <button className="btn-theme-toggle" onClick={toggleTheme} title="Toggle light/dark mode">
+            {theme === "dark" ? "☀" : "☾"}
+          </button>
           <button className="btn-spotify" onClick={() => setShowSpotify(true)}>
             <span className="btn-spotify__icon">♫</span>
             {playlistName || "Playlist"}
@@ -259,6 +286,7 @@ export default function App() {
                 soundtrack={soundtrack}
                 playlistSource={playlist[0]?.source === "spotify" ? "spotify" : "demo"}
                 onImportSpotify={() => setShowSpotify(true)}
+                onSelectTrack={selectTrack}
               />
             </div>
             <div className="bottom-right">
@@ -269,7 +297,8 @@ export default function App() {
                 onSelectTrack={selectTrack}
                 onHoverTrack={hoverTrack}
                 onChangePlaylist={() => setShowSpotify(true)}
-                onCreatePlaylist={() => setShowBuilder(true)}
+                onCreatePlaylist={() => setShowBuilder("new")}
+                onEditPlaylist={() => setShowBuilder("edit")}
               />
             </div>
           </div>
@@ -296,8 +325,13 @@ export default function App() {
 
       {showBuilder && (
         <PlaylistBuilder
-          initialDraft={loadDraftPlaylist()}
+          initialDraft={
+            showBuilder === "edit"
+              ? { id: "active", name: playlistName, tracks: playlist }
+              : loadDraftPlaylist()
+          }
           runDurationSeconds={appState.runPlan.targetTimeSeconds}
+          routeName={routeName}
           onGenerate={(tracks, name) => {
             handlePlaylistChange(tracks, name);
             setShowBuilder(false);

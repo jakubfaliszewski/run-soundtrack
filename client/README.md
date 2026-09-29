@@ -39,14 +39,14 @@ Without this the app still works — the demo playlist and the server-side publi
 ```
 src/
 ├── components/
-│   ├── PlaylistBuilder.tsx   In-app playlist builder (search, edit, save to Spotify)
+│   ├── PlaylistBuilder.tsx   In-app playlist builder (search, coverage, undo, save to Spotify)
 │   ├── SpotifyPicker.tsx     Spotify login + playlist grid
 │   ├── Wizard.tsx            Onboarding: GPX → pace → playlist
 │   ├── MapView.tsx           Leaflet map
-│   ├── PlaylistPanel.tsx     Active playlist panel
+│   ├── PlaylistPanel.tsx     Active playlist panel (Change / Build / Edit)
 │   ├── Timeline.tsx          Distance timeline bar
 │   ├── RunSetup.tsx          Pace/route editor overlay
-│   ├── RunSummary.tsx        Summary stats
+│   ├── RunSummary.tsx        Run stats + start/finish track summary
 │   └── TrackItem.tsx         Single track row
 ├── lib/
 │   ├── engine.ts             Soundtrack engine (client-side mirror)
@@ -60,6 +60,10 @@ src/
 └── types/
     └── domain.ts             Shared domain types (Track, Route, DraftPlaylist, …)
 ```
+
+## Theming
+
+The stylesheet uses CSS custom properties for all colours. Dark theme is the default (`:root`); light theme overrides via `[data-theme="light"]` on `<html>`. Toggle with the `☀/☾` button in the header.
 
 ## TypeScript
 

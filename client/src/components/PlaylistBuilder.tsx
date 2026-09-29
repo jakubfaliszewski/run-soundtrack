@@ -8,9 +8,8 @@ import {
   hasWriteScopes,
   SpotifyForbiddenError,
 } from "../lib/spotify";
-import { loadSpotifyTokens } from "../lib/storage";
+import { loadSpotifyTokens, saveDraftPlaylist } from "../lib/storage";
 import { formatTime } from "../lib/format";
-import { saveDraftPlaylist } from "../lib/storage";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -22,6 +21,16 @@ function generateId(): string {
 
 function totalDuration(tracks: Track[]): number {
   return tracks.reduce((sum, t) => sum + t.durationSeconds, 0);
+}
+
+/** Build a suggested playlist name from route info. */
+export function buildSuggestedName(routeName: string | undefined, targetTimeSeconds: number | undefined): string {
+  const timePart = targetTimeSeconds != null ? formatTime(targetTimeSeconds) : null;
+  const namePart = routeName?.trim() || null;
+  if (namePart && timePart) return `${namePart} — ${timePart}`;
+  if (namePart) return namePart;
+  if (timePart) return `Run Soundtrack — ${timePart}`;
+  return "Run Soundtrack";
 }
 
 // ---------------------------------------------------------------------------
@@ -36,14 +45,23 @@ interface SaveState {
   errorMessage?: string;
 }
 
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+interface UndoAction {
+  tracks: Track[];
+  label: string;
+}
+
 interface PlaylistBuilderProps {
   /** Called when user clicks "Generate soundtrack" with at least one track. */
   onGenerate: (tracks: Track[], playlistName: string) => void;
   onClose: () => void;
-  /** Optional run duration for the "shorter/longer" warning. */
+  /** Optional run duration for the coverage panel. */
   runDurationSeconds?: number;
   /** Existing draft to pre-populate (from localStorage). */
   initialDraft?: DraftPlaylist | null;
+  /** Route name for auto-generated playlist name suggestion. */
+  routeName?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -145,6 +163,54 @@ function PlaylistTrackRow({
 }
 
 // ---------------------------------------------------------------------------
+// Coverage panel (§7)
+// ---------------------------------------------------------------------------
+
+function CoveragePanel({
+  playlistSeconds,
+  runSeconds,
+}: {
+  playlistSeconds: number;
+  runSeconds: number;
+}) {
+  const coverage = Math.min(playlistSeconds / runSeconds, 1);
+  const pct = Math.round(coverage * 100);
+  const diff = playlistSeconds - runSeconds;
+
+  return (
+    <div className="pb-coverage">
+      <div className="pb-coverage__stats">
+        <div className="pb-coverage__stat">
+          <span className="pb-coverage__stat-label">Playlist</span>
+          <span className="pb-coverage__stat-value">{formatTime(playlistSeconds)}</span>
+        </div>
+        <div className="pb-coverage__stat">
+          <span className="pb-coverage__stat-label">Run</span>
+          <span className="pb-coverage__stat-value">{formatTime(runSeconds)}</span>
+        </div>
+        <div className="pb-coverage__stat">
+          <span className="pb-coverage__stat-label">Coverage</span>
+          <span className="pb-coverage__stat-value">{pct}%</span>
+        </div>
+      </div>
+      <div className="pb-coverage__bar-track">
+        <div className="pb-coverage__bar-fill" style={{ width: `${pct}%` }} />
+      </div>
+      {diff < 0 && (
+        <div className="pb-coverage__warning playlist-warning">
+          ⚠ Playlist is {formatTime(Math.abs(diff))} shorter than your run
+        </div>
+      )}
+      {diff > 0 && (
+        <div className="pb-coverage__info playlist-info">
+          ✓ Playlist covers the full run · {formatTime(diff)} longer
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Save to Spotify panel
 // ---------------------------------------------------------------------------
 
@@ -163,7 +229,6 @@ function SaveToSpotify({
   const [name, setName] = useState(defaultName);
   const [isPublic, setIsPublic] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle" });
-  // True when we know for certain the token lacks write scope (detected at runtime).
   const [needsReauth, setNeedsReauth] = useState(!hasWrite);
 
   async function handleCreate() {
@@ -188,7 +253,6 @@ function SaveToSpotify({
       return;
     }
 
-    // Add tracks
     const uris = tracks.map((t) => t.spotifyUri).filter(Boolean) as string[];
     try {
       await addTracksToSpotifyPlaylist(playlistId, uris);
@@ -212,37 +276,28 @@ function SaveToSpotify({
     }
   }
 
-  // ── Not logged in ──────────────────────────────────────────────────────────
   if (!isLoggedIn) {
     return (
       <div className="pb-save-panel">
         <p className="pb-save-panel__info">Connect Spotify to save this playlist.</p>
-        <button
-          className="btn-spotify-connect"
-          onClick={() => startLogin(true).catch(() => {})}
-        >
+        <button className="btn-spotify-connect" onClick={() => startLogin(true).catch(() => {})}>
           Connect Spotify
         </button>
       </div>
     );
   }
 
-  // ── Missing write scope (pre-flight check or confirmed at runtime via 403) ──
   if (needsReauth) {
     return (
       <div className="pb-save-panel">
         <p className="pb-save-panel__info">Spotify permission is required to create playlists.</p>
-        <button
-          className="btn-spotify-connect"
-          onClick={() => startLogin(true).catch(() => {})}
-        >
+        <button className="btn-spotify-connect" onClick={() => startLogin(true).catch(() => {})}>
           Connect Spotify
         </button>
       </div>
     );
   }
 
-  // ── Success ────────────────────────────────────────────────────────────────
   if (saveState.status === "success") {
     return (
       <div className="pb-save-panel pb-save-panel--success">
@@ -264,7 +319,6 @@ function SaveToSpotify({
     );
   }
 
-  // ── Partial failure ────────────────────────────────────────────────────────
   if (saveState.status === "partial") {
     return (
       <div className="pb-save-panel">
@@ -279,7 +333,6 @@ function SaveToSpotify({
     );
   }
 
-  // ── Form ───────────────────────────────────────────────────────────────────
   return (
     <div className="pb-save-panel">
       <h4 className="pb-save-panel__heading">Save to Spotify</h4>
@@ -294,27 +347,15 @@ function SaveToSpotify({
       </label>
       <div className="pb-save-panel__visibility">
         <label className="pb-save-panel__radio">
-          <input
-            type="radio"
-            name="visibility"
-            checked={!isPublic}
-            onChange={() => setIsPublic(false)}
-          />
+          <input type="radio" name="visibility" checked={!isPublic} onChange={() => setIsPublic(false)} />
           Private
         </label>
         <label className="pb-save-panel__radio">
-          <input
-            type="radio"
-            name="visibility"
-            checked={isPublic}
-            onChange={() => setIsPublic(true)}
-          />
+          <input type="radio" name="visibility" checked={isPublic} onChange={() => setIsPublic(true)} />
           Public
         </label>
       </div>
-      {saveState.status === "error" && (
-        <p className="error-text">{saveState.errorMessage}</p>
-      )}
+      {saveState.status === "error" && <p className="error-text">{saveState.errorMessage}</p>}
       <button
         className="btn-spotify-connect"
         onClick={handleCreate}
@@ -335,9 +376,18 @@ export default function PlaylistBuilder({
   onClose,
   runDurationSeconds,
   initialDraft,
+  routeName,
 }: PlaylistBuilderProps) {
+  // §18 — auto-suggest name, track whether user has edited it
+  const suggestedName = buildSuggestedName(routeName, runDurationSeconds);
+  const isRestoredDraft = Boolean(initialDraft);
+
   const [draftId] = useState(() => initialDraft?.id ?? generateId());
-  const [name, setName] = useState(initialDraft?.name ?? "My Running Playlist");
+  const [name, setName] = useState(initialDraft?.name ?? suggestedName);
+  // "auto" = still matches what we'd generate; "user" = user has typed something else
+  const [nameSource, setNameSource] = useState<"auto" | "user">(
+    isRestoredDraft ? "user" : "auto"
+  );
   const [tracks, setTracks] = useState<Track[]>(initialDraft?.tracks ?? []);
 
   const [query, setQuery] = useState("");
@@ -347,10 +397,29 @@ export default function PlaylistBuilder({
 
   const [showSavePanel, setShowSavePanel] = useState(false);
 
+  // §10 — undo
+  const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // §17 — autosave status
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>(isRestoredDraft ? "saved" : "idle");
+
   // Drag-and-drop
   const dragIndex = useRef<number | null>(null);
 
-  // ── Debounced search ─────────────────────────────────────────────────────
+  // ── §18: update suggested name when run info changes, if still auto ───────
+  useEffect(() => {
+    if (nameSource === "auto") {
+      setName(buildSuggestedName(routeName, runDurationSeconds));
+    }
+  }, [routeName, runDurationSeconds, nameSource]);
+
+  function handleNameChange(v: string) {
+    setName(v);
+    setNameSource("user");
+  }
+
+  // ── Debounced search ──────────────────────────────────────────────────────
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const runSearch = useCallback(async (q: string) => {
@@ -373,14 +442,33 @@ export default function PlaylistBuilder({
     return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
   }, [query, runSearch]);
 
-  // ── Persist draft on every change ────────────────────────────────────────
+  // ── §17 Persist draft + update save status ────────────────────────────────
   useEffect(() => {
-    saveDraftPlaylist({ id: draftId, name, tracks });
+    setSaveStatus("saving");
+    try {
+      saveDraftPlaylist({ id: draftId, name, tracks });
+      setSaveStatus("saved");
+    } catch {
+      setSaveStatus("error");
+    }
   }, [draftId, name, tracks]);
+
+  // ── §10 Undo helpers ───────────────────────────────────────────────────────
+  function pushUndo(label: string, prev: Track[]) {
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setUndoAction({ tracks: prev, label });
+    undoTimer.current = setTimeout(() => setUndoAction(null), 3000);
+  }
+
+  function handleUndo() {
+    if (!undoAction) return;
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setTracks(undoAction.tracks);   // restores; does NOT push another undo
+    setUndoAction(null);
+  }
 
   // ── Track editing helpers ─────────────────────────────────────────────────
   function addTrack(t: Track) {
-    // Give duplicate entries unique IDs so React keys stay unique
     const uniqueId = tracks.some((x) => x.id === t.id)
       ? `${t.id}-${Date.now()}`
       : t.id;
@@ -388,11 +476,13 @@ export default function PlaylistBuilder({
   }
 
   function removeTrack(index: number) {
+    pushUndo("Track removed", tracks);
     setTracks((prev) => prev.filter((_, i) => i !== index));
   }
 
   function moveTrack(from: number, to: number) {
     if (to < 0 || to >= tracks.length) return;
+    pushUndo("Track moved", tracks);
     setTracks((prev) => {
       const next = [...prev];
       const [item] = next.splice(from, 1);
@@ -416,9 +506,8 @@ export default function PlaylistBuilder({
     dragIndex.current = null;
   }
 
-  // ── Duration + warning ─────────────────────────────────────────────────────
+  // ── Duration + coverage ───────────────────────────────────────────────────
   const total = totalDuration(tracks);
-  const diff = runDurationSeconds != null ? total - runDurationSeconds : null;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -431,15 +520,20 @@ export default function PlaylistBuilder({
           <button className="spotify-modal__close" onClick={onClose}>✕</button>
         </div>
 
-        {/* Playlist name */}
+        {/* Playlist name + §17 autosave status */}
         <div className="pb-name-row">
           <label className="pb-name-row__label">Name</label>
           <input
             className="spotify-modal__input pb-name-row__input"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => handleNameChange(e.target.value)}
             placeholder="My Running Playlist"
           />
+          <span className={`pb-save-status pb-save-status--${saveStatus}`}>
+            {saveStatus === "saving" && "Saving…"}
+            {saveStatus === "saved" && "✓ Saved"}
+            {saveStatus === "error" && "Could not save draft locally"}
+          </span>
         </div>
 
         <div className="pb-columns">
@@ -447,7 +541,7 @@ export default function PlaylistBuilder({
           <div className="pb-col pb-col--search">
             <div className="pb-section-label">Search Spotify</div>
             <input
-              className="spotify-modal__input"
+              className="spotify-modal__input spotify-modal__input--search"
               type="text"
               placeholder="🔍 Search tracks…"
               value={query}
@@ -478,10 +572,7 @@ export default function PlaylistBuilder({
             <div className="pb-section-label">
               Your playlist
               {tracks.length > 0 && (
-                <button
-                  className="btn-link pb-clear-btn"
-                  onClick={() => setTracks([])}
-                >
+                <button className="btn-link pb-clear-btn" onClick={() => setTracks([])}>
                   Clear all
                 </button>
               )}
@@ -509,19 +600,22 @@ export default function PlaylistBuilder({
               ))}
             </div>
 
-            {/* Duration footer */}
-            <div className="pb-duration">
-              <span className="pb-duration__label">Total</span>
-              <span className="pb-duration__value">{formatTime(total)}</span>
-            </div>
-            {diff !== null && diff < 0 && (
-              <div className="playlist-warning pb-duration-warning">
-                Playlist is {formatTime(Math.abs(diff))} shorter than your run
+            {/* §10 Undo toast */}
+            {undoAction && (
+              <div className="pb-undo-toast">
+                <span>{undoAction.label}</span>
+                <button className="pb-undo-toast__btn" onClick={handleUndo}>Undo</button>
               </div>
             )}
-            {diff !== null && diff > 0 && (
-              <div className="playlist-info pb-duration-warning">
-                Playlist is {formatTime(diff)} longer than your run
+
+            {/* §7 Coverage panel (only when run duration is known) */}
+            {runDurationSeconds != null && tracks.length > 0 ? (
+              <CoveragePanel playlistSeconds={total} runSeconds={runDurationSeconds} />
+            ) : (
+              /* Minimal duration footer when no run context */
+              <div className="pb-duration">
+                <span className="pb-duration__label">Total</span>
+                <span className="pb-duration__value">{formatTime(total)}</span>
               </div>
             )}
 

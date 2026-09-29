@@ -21,7 +21,9 @@ No API keys required to run. Spotify integration is optional.
 - **In-app playlist builder** — search Spotify tracks, add/remove/reorder them into a custom playlist, see live duration, and save as a new Spotify playlist — all without leaving the app
 - **Spotify integration** — log in with Spotify (OAuth PKCE) to browse and select from your own playlists; or paste any public playlist URL (no login needed)
 - **Save to Spotify** — create a new private or public playlist directly from the builder with one click
+- **Start / finish track summary** — always see which song plays at the gun and at the finish line
 - **Demo playlist** — 25 tracks built in; app is fully usable without any Spotify account
+- **Light / dark mode** — toggle with one click; preference persists across sessions
 - **Offline fallback** — if the server is unreachable, all calculations run client-side
 - **LocalStorage persistence** — last uploaded route and current draft playlist survive a page refresh
 - **No database, no accounts** required
@@ -154,7 +156,12 @@ Foo Fighters          [+]
 - Debounced search (300 ms), up to 10 results per query
 - Drag-and-drop reorder, or use ↑ / ↓ buttons
 - Duplicate tracks allowed (same song can appear multiple times)
-- Live total duration with run-length warning
+- **Live coverage panel** — shows playlist duration, run duration, coverage %, and a progress bar; updates on every edit
+- **Undo** — remove or reorder a track and get a 3-second toast to undo it
+- **Auto-named** — playlist name pre-filled as `{Route} — {target time}`, never overwritten once you type your own
+- **Autosave indicator** — "✓ Saved" / "Saving…" feedback next to the name field
+- **Edit from result screen** — open the builder pre-loaded with the current active playlist via the **Edit** button in the playlist panel
+- **Back to playlist** — after generating a soundtrack, re-open the builder to iterate without starting over
 - Draft auto-saved to `localStorage` — survives a page refresh
 - **Save to Spotify** creates a new playlist (private by default) and adds all tracks in the current order
 
@@ -192,7 +199,8 @@ The **Soundtrack Engine** is a pure function — it receives `Route`, `TimedRout
 | `client/src/components/PlaylistBuilder.tsx` | In-app playlist builder (search, edit, save to Spotify) |
 | `client/src/components/MapView.tsx` | Leaflet map with segments, markers, tooltips |
 | `client/src/components/SpotifyPicker.tsx` | Spotify login + playlist grid |
-| `client/src/components/PlaylistPanel.tsx` | Active playlist panel with Change / Build actions |
+| `client/src/components/PlaylistPanel.tsx` | Active playlist panel with Change / Build / Edit actions |
+| `client/src/components/RunSummary.tsx` | Run stats + start/finish track summary |
 | `client/src/components/Timeline.tsx` | Distance-proportional timeline bar |
 
 ### Domain types
