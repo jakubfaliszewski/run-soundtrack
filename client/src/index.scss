@@ -7,80 +7,84 @@
 // Static compile-time values (used only where CSS vars can't work, e.g. color.adjust())
 $_accent-light: #60a5fa;
 
-$radius:    8px;
+$radius: 8px;
 $radius-sm: 5px;
 $radius-xs: 3px;
-$font:      -apple-system, "Segoe UI", system-ui, sans-serif;
+$font: -apple-system, "Segoe UI", system-ui, sans-serif;
 $font-mono: "SF Mono", "Fira Code", ui-monospace, monospace;
 
-$header-h:       54px;
-$timeline-h:     102px;
+$header-h: 54px;
+$timeline-h: 102px;
 $bottom-panel-h: 256px;
 
 // All colours are CSS custom properties — switched at runtime by data-theme.
 // Sass variables are thin aliases so existing rules compile unchanged.
-$color-bg:           var(--color-bg);
-$color-surface:      var(--color-surface);
-$color-surface-2:    var(--color-surface-2);
-$color-surface-3:    var(--color-surface-3);
-$color-border:       var(--color-border);
+$color-bg: var(--color-bg);
+$color-surface: var(--color-surface);
+$color-surface-2: var(--color-surface-2);
+$color-surface-3: var(--color-surface-3);
+$color-border: var(--color-border);
 $color-border-light: var(--color-border-light);
-$color-text:         var(--color-text);
-$color-muted:        var(--color-muted);
-$color-accent:       var(--color-accent);
+$color-text: var(--color-text);
+$color-muted: var(--color-muted);
+$color-accent: var(--color-accent);
 $color-accent-light: var(--color-accent-light);
-$color-spotify:      var(--color-spotify);
-$color-warning:      var(--color-warning);
-$color-success:      var(--color-success);
-$color-danger:       var(--color-danger);
+$color-spotify: var(--color-spotify);
+$color-warning: var(--color-warning);
+$color-success: var(--color-success);
+$color-danger: var(--color-danger);
 
 // ── Dark theme (default) ──────────────────────────────────────────────────
 :root {
-  --color-bg:           #0a0c12;
-  --color-surface:      #13161f;
-  --color-surface-2:    #1c2030;
-  --color-surface-3:    #242840;
-  --color-border:       #272b3d;
+  --color-bg: #0a0c12;
+  --color-surface: #13161f;
+  --color-surface-2: #1c2030;
+  --color-surface-3: #242840;
+  --color-border: #272b3d;
   --color-border-light: #353a52;
-  --color-text:         #e4e7f0;
-  --color-muted:        #6b7294;
-  --color-accent:       #3b82f6;
+  --color-text: #e4e7f0;
+  --color-muted: #6b7294;
+  --color-accent: #3b82f6;
   --color-accent-light: #60a5fa;
-  --color-spotify:      #1db954;
-  --color-warning:      #f59e0b;
-  --color-success:      #16a34a;
-  --color-danger:       #ef4444;
+  --color-spotify: #1db954;
+  --color-warning: #f59e0b;
+  --color-success: #16a34a;
+  --color-danger: #ef4444;
 }
 
 // ── Light theme ───────────────────────────────────────────────────────────
 [data-theme="light"] {
-  --color-bg:           #f5f6fa;
-  --color-surface:      #ffffff;
-  --color-surface-2:    #eef0f6;
-  --color-surface-3:    #e3e6f0;
-  --color-border:       #d1d5e0;
+  --color-bg: #f5f6fa;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef0f6;
+  --color-surface-3: #e3e6f0;
+  --color-border: #d1d5e0;
   --color-border-light: #bcc2d4;
-  --color-text:         #111827;
-  --color-muted:        #6b7280;
-  --color-accent:       #2563eb;
+  --color-text: #111827;
+  --color-muted: #6b7280;
+  --color-accent: #2563eb;
   --color-accent-light: #3b82f6;
-  --color-spotify:      #1db954;
-  --color-warning:      #d97706;
-  --color-success:      #16a34a;
-  --color-danger:       #dc2626;
+  --color-spotify: #1db954;
+  --color-warning: #d97706;
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
 }
 
 // =========================================================
 // Reset & Base
 // =========================================================
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   overflow: hidden;
 }
@@ -171,20 +175,26 @@ body {
 }
 
 // Keep Leaflet below our overlays
-.leaflet-pane         { z-index: 1; }
+.leaflet-pane {
+  z-index: 1;
+}
 .leaflet-top,
-.leaflet-bottom       { z-index: 10; }
+.leaflet-bottom {
+  z-index: 10;
+}
 
 // Leaflet tooltip styling
 .leaflet-tooltip {
   background: $color-surface !important;
   border: 1px solid $color-border-light !important;
   border-radius: $radius-sm !important;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
   padding: 0 !important;
   color: $color-text !important;
 
-  &::before { display: none !important; }
+  &::before {
+    display: none !important;
+  }
 }
 
 .map-tooltip {
@@ -220,7 +230,7 @@ body {
 }
 
 .bottom-left {
-  width: 300px;
+  width: 360px;
   flex-shrink: 0;
   border-right: 1px solid $color-border;
   overflow-y: auto;
@@ -299,7 +309,9 @@ body {
   padding: 24px;
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
 
   &:hover {
     border-color: $color-accent;
@@ -311,7 +323,9 @@ body {
     border-color: $color-success;
     background: rgba($color-success, 0.04);
 
-    .drop-zone__icon { color: $color-success; }
+    .drop-zone__icon {
+      color: $color-success;
+    }
   }
 
   &__info {
@@ -368,7 +382,9 @@ body {
   outline: none;
   letter-spacing: 1px;
 
-  &:focus { border-color: $color-accent; }
+  &:focus {
+    border-color: $color-accent;
+  }
 }
 
 .pace-badge {
@@ -392,9 +408,13 @@ body {
   border: 1.5px solid $color-border;
   border-radius: $radius-sm;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 
-  input { accent-color: $color-accent; }
+  input {
+    accent-color: $color-accent;
+  }
 
   &--active {
     border-color: $color-accent;
@@ -461,7 +481,10 @@ body {
   color: $color-text;
   font-family: $font-mono;
 
-  .arrow { color: $color-muted; font-family: $font; }
+  .arrow {
+    color: $color-muted;
+    font-family: $font;
+  }
 }
 
 // Buttons
@@ -475,11 +498,18 @@ body {
   font-weight: 700;
   font-family: $font;
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
+  transition:
+    background 0.15s,
+    opacity 0.15s;
   white-space: nowrap;
 
-  &:hover:not(:disabled) { background: $color-accent-light; }
-  &:disabled { opacity: 0.35; cursor: not-allowed; }
+  &:hover:not(:disabled) {
+    background: $color-accent-light;
+  }
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
 }
 
 .btn-secondary {
@@ -491,7 +521,9 @@ body {
   font-family: $font;
   padding: 6px 14px;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
   white-space: nowrap;
 
   &:hover {
@@ -511,7 +543,9 @@ body {
   text-decoration: underline;
   text-underline-offset: 2px;
 
-  &:hover { color: color.adjust($_accent-light, $lightness: 10%); }
+  &:hover {
+    color: color.adjust($_accent-light, $lightness: 10%);
+  }
 }
 
 .btn-spotify {
@@ -527,7 +561,9 @@ body {
   font-weight: 600;
   padding: 6px 12px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
   white-space: nowrap;
 
   &:hover {
@@ -535,7 +571,9 @@ body {
     border-color: $color-spotify;
   }
 
-  &__icon { font-size: 14px; }
+  &__icon {
+    font-size: 14px;
+  }
 }
 
 .error-text {
@@ -640,14 +678,18 @@ body {
   text-decoration: underline;
   transition: color 0.15s;
 
-  &:hover { color: $color-spotify; }
+  &:hover {
+    color: $color-spotify;
+  }
 }
 
 .warning-badge {
   font-size: 11px;
   color: $color-warning;
 
-  &--short { color: $color-danger; }
+  &--short {
+    color: $color-danger;
+  }
 }
 
 // =========================================================
@@ -666,6 +708,7 @@ body {
     gap: 8px;
     flex-shrink: 0;
     border-bottom: 1px solid $color-border;
+    justify-content: space-between;
 
     h3 {
       font-size: 10px;
@@ -710,7 +753,9 @@ body {
   gap: 10px;
 
   &:hover,
-  &--selected { background: $color-surface-2; }
+  &--selected {
+    background: $color-surface-2;
+  }
 
   &__number {
     font-size: 10px;
@@ -780,8 +825,12 @@ body {
     top: 0;
     transform: translateX(-50%);
 
-    &:first-child { transform: none; }
-    &:last-child { transform: translateX(-100%); }
+    &:first-child {
+      transform: none;
+    }
+    &:last-child {
+      transform: translateX(-100%);
+    }
   }
 
   &__tick-label {
@@ -809,7 +858,7 @@ body {
     border-right: 1px solid $color-bg;
 
     &--active {
-      outline: 1.5px solid rgba(255,255,255,0.4);
+      outline: 1.5px solid rgba(255, 255, 255, 0.4);
       outline-offset: -1px;
       z-index: 2;
     }
@@ -869,7 +918,7 @@ body {
   border-radius: $radius;
   width: 100%;
   max-width: 480px;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
 
   &__header {
     display: flex;
@@ -895,9 +944,14 @@ body {
     cursor: pointer;
     padding: 2px 6px;
     border-radius: $radius-xs;
-    transition: color 0.15s, background 0.15s;
+    transition:
+      color 0.15s,
+      background 0.15s;
 
-    &:hover { color: $color-text; background: $color-surface-2; }
+    &:hover {
+      color: $color-text;
+      background: $color-surface-2;
+    }
   }
 
   &__hint {
@@ -906,7 +960,9 @@ body {
     color: $color-muted;
     line-height: 1.5;
 
-    strong { color: $color-text; }
+    strong {
+      color: $color-text;
+    }
   }
 
   &__input-row {
@@ -926,8 +982,12 @@ body {
     padding: 8px 12px;
     outline: none;
 
-    &::placeholder { color: $color-muted; }
-    &:focus { border-color: $color-spotify; }
+    &::placeholder {
+      color: $color-muted;
+    }
+    &:focus {
+      border-color: $color-spotify;
+    }
     &--search {
       flex: none;
     }
@@ -976,7 +1036,9 @@ body {
     padding: 7px 12px;
     border-bottom: 1px solid $color-border;
 
-    &:last-child { border-bottom: none; }
+    &:last-child {
+      border-bottom: none;
+    }
   }
 
   &__art {
@@ -1063,14 +1125,18 @@ body {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 // =========================================================
 // Utilities
 // =========================================================
 
-.muted { color: $color-muted; }
+.muted {
+  color: $color-muted;
+}
 
 // =========================================================
 // App header — route name
@@ -1117,7 +1183,9 @@ body {
     letter-spacing: 0.2px;
   }
 
-  &__brand-icon { color: $color-accent; }
+  &__brand-icon {
+    color: $color-accent;
+  }
 
   &__steps {
     display: flex;
@@ -1130,14 +1198,18 @@ body {
     height: 8px;
     border-radius: 50%;
     background: $color-border-light;
-    transition: background 0.2s, transform 0.2s;
+    transition:
+      background 0.2s,
+      transform 0.2s;
 
     &--active {
       background: $color-accent;
       transform: scale(1.3);
     }
 
-    &--done { background: $color-success; }
+    &--done {
+      background: $color-success;
+    }
   }
 
   &__body {
@@ -1186,10 +1258,14 @@ body {
     gap: 10px;
     margin-top: 4px;
 
-    .btn-secondary { flex-shrink: 0; }
+    .btn-secondary {
+      flex-shrink: 0;
+    }
   }
 
-  &__next { flex: 1; }
+  &__next {
+    flex: 1;
+  }
 
   &__demo-link {
     font-size: 13px;
@@ -1241,7 +1317,9 @@ body {
     font-weight: 700;
   }
 
-  &__selected-count { font-size: 12px; }
+  &__selected-count {
+    font-size: 12px;
+  }
 
   &__divider {
     display: flex;
@@ -1250,7 +1328,8 @@ body {
     color: $color-muted;
     font-size: 11px;
 
-    &::before, &::after {
+    &::before,
+    &::after {
       content: "";
       flex: 1;
       height: 1px;
@@ -1269,7 +1348,9 @@ body {
     border-radius: $radius;
     cursor: pointer;
     text-align: left;
-    transition: background 0.15s, border-color 0.15s;
+    transition:
+      background 0.15s,
+      border-color 0.15s;
     color: $color-text;
     font-family: $font;
 
@@ -1317,7 +1398,9 @@ body {
     font-weight: 600;
     font-family: $font;
     color: $color-text;
-    transition: background 0.15s, border-color 0.15s;
+    transition:
+      background 0.15s,
+      border-color 0.15s;
 
     &:hover {
       background: $color-surface-3;
@@ -1347,7 +1430,9 @@ body {
   display: flex;
   flex-direction: column;
 
-  .spotify-modal__header { flex-shrink: 0; }
+  .spotify-modal__header {
+    flex-shrink: 0;
+  }
 
   &__body {
     flex: 1;
@@ -1400,10 +1485,17 @@ body {
   font-family: $font;
   color: $color-text;
 
-  &:hover { background: $color-surface-2; }
-  &:disabled { opacity: 0.5; cursor: wait; }
+  &:hover {
+    background: $color-surface-2;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: wait;
+  }
 
-  &--loading { opacity: 0.7; }
+  &--loading {
+    opacity: 0.7;
+  }
 
   &__img {
     position: relative;
@@ -1473,7 +1565,9 @@ body {
   font-family: $font;
   padding: 3px 8px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
 
   &:hover {
     color: $color-danger;
@@ -1516,7 +1610,9 @@ body {
       border-radius: $radius-xs;
     }
   }
-  a { color: $color-accent-light; }
+  a {
+    color: $color-accent-light;
+  }
 }
 
 // Setup steps shown when VITE_SPOTIFY_CLIENT_ID is not set
@@ -1538,7 +1634,9 @@ body {
   color: $color-text;
   line-height: 1.5;
 
-  a { color: $color-accent-light; }
+  a {
+    color: $color-accent-light;
+  }
 
   code {
     font-family: $font-mono;
@@ -1602,11 +1700,19 @@ body {
     display: flex;
     gap: 8px;
 
-    .spotify-modal__input { flex: 1; }
-    .btn-primary { flex-shrink: 0; padding: 6px 14px; font-size: 13px; }
+    .spotify-modal__input {
+      flex: 1;
+    }
+    .btn-primary {
+      flex-shrink: 0;
+      padding: 6px 14px;
+      font-size: 13px;
+    }
   }
 
-  .error-text { margin-top: 6px; }
+  .error-text {
+    margin-top: 6px;
+  }
 }
 
 .btn-spotify-connect {
@@ -1625,7 +1731,9 @@ body {
   cursor: pointer;
   transition: opacity 0.15s;
 
-  &:hover { opacity: 0.9; }
+  &:hover {
+    opacity: 0.9;
+  }
 }
 
 .loading-spinner--sm {
@@ -1640,15 +1748,17 @@ body {
 
 .playlist-panel__change-btn {
   margin-left: auto;
-  background: none;
   border: 1px solid $color-border-light;
   border-radius: $radius-xs;
-  color: $color-muted;
-  font-size: 10px;
+  background: var(--color-accent);
+  color: var(--color-border);
+  font-size: 12px;
   font-family: $font;
-  padding: 2px 7px;
+  padding: 5px 12px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
 
   &:hover {
     color: $color-text;
@@ -1778,7 +1888,9 @@ body {
   padding: 7px 0;
   border-bottom: 1px solid $color-border;
 
-  &:last-child { border-bottom: none; }
+  &:last-child {
+    border-bottom: none;
+  }
 
   &__art {
     width: 40px;
@@ -1839,7 +1951,9 @@ body {
     padding: 0;
     transition: background 0.15s;
 
-    &:hover { background: $color-accent-light; }
+    &:hover {
+      background: $color-accent-light;
+    }
   }
 }
 
@@ -1857,9 +1971,13 @@ body {
   border-bottom: 1px solid $color-border;
   cursor: grab;
 
-  &:last-child { border-bottom: none; }
+  &:last-child {
+    border-bottom: none;
+  }
 
-  &:active { cursor: grabbing; }
+  &:active {
+    cursor: grabbing;
+  }
 
   &__handle {
     color: $color-muted;
@@ -1937,14 +2055,19 @@ body {
     align-items: center;
     justify-content: center;
     padding: 0;
-    transition: background 0.12s, color 0.12s;
+    transition:
+      background 0.12s,
+      color 0.12s;
 
     &:hover:not(:disabled) {
       background: $color-surface-2;
       color: $color-text;
     }
 
-    &:disabled { opacity: 0.3; cursor: not-allowed; }
+    &:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
 
     &--remove {
       &:hover:not(:disabled) {
@@ -2034,7 +2157,9 @@ body {
     color: $color-text;
     cursor: pointer;
 
-    input { accent-color: $color-accent; }
+    input {
+      accent-color: $color-accent;
+    }
   }
 
   &__info {
@@ -2117,8 +2242,12 @@ body {
     transition: width 0.2s ease;
   }
 
-  &__warning { font-size: 12px; }
-  &__info    { font-size: 12px; }
+  &__warning {
+    font-size: 12px;
+  }
+  &__info {
+    font-size: 12px;
+  }
 }
 
 // §10 Undo toast
@@ -2146,7 +2275,9 @@ body {
     white-space: nowrap;
     transition: background 0.12s;
 
-    &:hover { background: $color-surface-2; }
+    &:hover {
+      background: $color-surface-2;
+    }
   }
 }
 
@@ -2156,15 +2287,24 @@ body {
   white-space: nowrap;
   flex-shrink: 0;
 
-  &--idle   { color: transparent; }
-  &--saving { color: $color-muted; }
-  &--saved  { color: $color-success; }
-  &--error  { color: $color-danger; }
+  &--idle {
+    color: transparent;
+  }
+  &--saving {
+    color: $color-muted;
+  }
+  &--saved {
+    color: $color-success;
+  }
+  &--error {
+    color: $color-danger;
+  }
 }
 
 // §15 Start/finish track bookmarks
 .summary-track-bookmarks {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   margin: 10px 0;
   padding: 10px 0;
@@ -2185,11 +2325,15 @@ body {
   text-align: left;
   transition: background 0.12s;
 
-  &:hover { background: $color-surface-2; }
+  &:hover {
+    background: $color-surface-2;
+  }
 
   &--empty {
     cursor: default;
-    &:hover { background: transparent; }
+    &:hover {
+      background: transparent;
+    }
   }
 
   &__label {
@@ -2255,7 +2399,10 @@ body {
   color: $color-muted;
   font-size: 16px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
   flex-shrink: 0;
 
   &:hover {
@@ -2272,3 +2419,245 @@ body {
     z-index: 10;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Elevation profile (timeline)
+// ---------------------------------------------------------------------------
+
+.timeline__elevation-wrap {
+  position: relative;
+  height: 40px;
+  margin-bottom: 4px;
+  border-radius: $radius-xs;
+  overflow: hidden;
+}
+
+.timeline__elevation {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.timeline__elevation-path {
+  fill: rgba(59, 130, 246, 0.18);
+  stroke: rgba(59, 130, 246, 0.45);
+  stroke-width: 1.5;
+}
+
+// ---------------------------------------------------------------------------
+// Sidebar layout
+// ---------------------------------------------------------------------------
+
+.app-body--with-sidebar {
+  flex-direction: row;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-sidebar {
+  width: 380px;
+  flex-shrink: 0;
+  border-left: 1px solid $color-border;
+  background: $color-surface;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// Sidebar variant of PlaylistBuilder — fills the sidebar panel
+.pb-sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+
+  // Collapse the two-column search/playlist layout to a single column
+  .pb-columns {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .pb-col--search {
+    border-right: none;
+    border-bottom: 1px solid $color-border;
+    flex: none;
+  }
+
+  // Limit search results height so playlist col is still visible
+  .pb-search-results {
+    max-height: 220px;
+  }
+
+  .pb-col--playlist {
+    flex: 1;
+  }
+
+  // Remove the backdrop rounding — panel is edge-to-edge
+  .pb-modal__header {
+    border-radius: 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TrackItem — meta row (artist inline)
+// ---------------------------------------------------------------------------
+
+.track-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.3;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+// Redefine artist as inline span inside meta row
+.track-item__meta .track-item__artist {
+  font-size: 11px;
+  color: $color-muted;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+// ---------------------------------------------------------------------------
+// TrackArt — album art wrapper with preview overlay
+// ---------------------------------------------------------------------------
+
+.track-art {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: $radius-xs;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-surface-2;
+
+  &--md {
+    width: 36px;
+    height: 36px;
+  }
+
+  &--sm {
+    width: 32px;
+    height: 32px;
+  }
+
+  &__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  &__placeholder {
+    font-size: 14px;
+    color: $color-muted;
+  }
+
+  // ▶/⏸ preview button — hidden until hover
+  &__preview {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    border: none;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s;
+    padding: 0;
+    border-radius: 0;
+
+    &--playing {
+      opacity: 1;
+      background: rgba(0, 0, 0, 0.45);
+    }
+  }
+
+  &:hover &__preview {
+    opacity: 1;
+  }
+
+  // Spotify deep-link hint (↗) when no preview but has URI
+  &__spotify-hint {
+    position: absolute;
+    bottom: 1px;
+    right: 2px;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1;
+  }
+
+  // When the whole art is a link
+  &[href] {
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: inherit;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Elevation tooltip (timeline hover)
+// ---------------------------------------------------------------------------
+
+.timeline__elevation-tip {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  background: $color-surface-3;
+  border: 1px solid $color-border-light;
+  border-radius: $radius-sm;
+  padding: 4px 8px;
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  font-family: $font-mono;
+
+  &__dist {
+    color: $color-text;
+    font-weight: 600;
+  }
+
+  &__ele {
+    color: $color-accent-light;
+  }
+
+  &__incline {
+    color: $color-muted;
+
+    &--up   { color: #f87171; }
+    &--down { color: #4ade80; }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RunSummary — elevation gain/loss stat values
+// ---------------------------------------------------------------------------
+
+.summary-value--gain { color: #f87171; }
+.summary-value--loss { color: #4ade80; }
+

@@ -1,5 +1,6 @@
 import type { SoundtrackSegment } from "../types/domain";
 import { formatDistance, formatTime, trackColor } from "../lib/format";
+import TrackArt from "./TrackArt";
 
 interface TrackItemProps {
   segment: SoundtrackSegment;
@@ -34,17 +35,19 @@ export default function TrackItem({
     >
       <span className="track-item__number" style={{ color }}>{index + 1}</span>
 
-      {segment.track.artworkUrl && (
-        <img
-          src={segment.track.artworkUrl}
-          alt=""
-          className="track-item__art"
-        />
-      )}
+      <TrackArt
+        artworkUrl={segment.track.artworkUrl}
+        previewUrl={segment.track.previewUrl}
+        spotifyUri={segment.track.spotifyUri}
+        title={segment.track.title}
+        size="md"
+      />
 
       <div className="track-item__body">
         <div className="track-item__title">{segment.track.title}</div>
-        <div className="track-item__artist">{segment.track.artist}</div>
+        <div className="track-item__meta">
+          <span className="track-item__artist">{segment.track.artist}</span>
+        </div>
         <div className="track-item__range">
           {formatDistance(segment.startDistanceMeters)} — {formatDistance(segment.endDistanceMeters)}
           {isTruncated && (

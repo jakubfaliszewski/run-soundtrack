@@ -25,7 +25,7 @@ npm test
 
 | Suite | File | What it covers |
 |---|---|---|
-| Engine | `client/src/lib/__tests__/engine.test.ts` | Haversine, GPX parsing, pace calculation, timed route, interpolation, soundtrack engine |
+| Engine | `client/src/lib/__tests__/engine.test.ts` | Haversine, GPX parsing (incl. elevation smoothing), pace calculation, timed route, interpolation, soundtrack engine |
 | Storage | `client/src/lib/__tests__/storage.test.ts` | Route, run plan, playlist, draft playlist, and Spotify token persistence |
 | Spotify | `client/src/lib/__tests__/spotify.test.ts` | `SpotifyForbiddenError`, `hasWriteScopes`, `searchTracks`, `createSpotifyPlaylist`, `addTracksToSpotifyPlaylist` |
 
@@ -43,7 +43,11 @@ run-soundtrack/
 ├── client/               React + Vite frontend
 │   └── src/
 │       ├── components/   UI components
-│       │   ├── PlaylistBuilder.tsx   ← in-app playlist builder
+│       │   ├── PlaylistBuilder.tsx   ← sidebar playlist builder (auto-apply)
+│       │   ├── TrackArt.tsx          ← album art with preview player
+│       │   ├── Timeline.tsx          ← timeline + elevation profile
+│       │   ├── MapView.tsx           ← Leaflet map with shadow halos + distance pin
+│       │   ├── RunSummary.tsx        ← run stats + elevation gain/loss
 │       │   ├── SpotifyPicker.tsx     ← Spotify login + playlist grid
 │       │   ├── Wizard.tsx            ← onboarding flow
 │       │   └── ...
@@ -73,6 +77,12 @@ No server-side playlist entity. `saveDraftPlaylist` / `loadDraftPlaylist` in `st
 **4. Write scopes are opt-in.**
 `startLogin(withWriteScopes = false)` — only pass `true` when the user explicitly attempts to save to Spotify. Do not request `playlist-modify-*` for search or import.
 
+**5. Playlist builder changes auto-apply.**
+`PlaylistBuilder` calls `onGenerate` automatically (debounced 300 ms) on every track list or name change. Do not add a manual "Generate" button.
+
+**6. GPX elevation is always smoothed.**
+`parseGpxClientSide` runs a ±7-point moving-average smoother on raw elevation values before storing them on `RoutePoint`. Gain counting uses a 2 m de-spike threshold. Do not read raw `ele` values for display.
+
 ## Theming
 
 All colours are CSS custom properties defined on `:root` (dark) and `[data-theme="light"]`. The Sass `$color-*` variables are thin aliases to `var(--color-*)`, so every existing selector works unchanged with both themes. The active theme is stored in `localStorage` under `rs_theme_v1` and applied with `data-theme` on `<html>` before first paint to avoid flash.
@@ -81,9 +91,11 @@ To add a new colour token, add it to both the `:root` and `[data-theme="light"]`
 
 ## Spotify API notes
 
-- Track search: `GET /v1/search?type=track&q=…&limit=10`
+- Track search: `GET /v1/search?type=track&q=…&limit=10` — response includes `preview_url` and `uri`
+- Playlist tracks: `GET /v1/playlists/{id}/items` — items use the `track` field (not `item`)
 - Create playlist: `POST /v1/me/playlists` (body: JSON)
 - Add tracks: `POST /v1/playlists/{id}/items?uris=…` (URIs as comma-separated query parameter — the `/tracks` endpoint was removed by Spotify in February 2026)
+- `/audio-features` (BPM/tempo): returns **403** for apps without explicit Spotify allowlisting — do not attempt to use this endpoint
 
 ## Pull requests
 

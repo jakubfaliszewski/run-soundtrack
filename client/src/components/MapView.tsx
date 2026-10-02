@@ -1,8 +1,8 @@
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, useMap } from "react-leaflet";
 import type { LatLngExpression } from "leaflet";
 import type { Route, Soundtrack, SoundtrackSegment } from "../types/domain";
-import { getRouteSegmentPoints } from "../lib/engine";
+import { getRouteSegmentPoints, getCoordinateAtDistance } from "../lib/engine";
 import { trackColor, formatDistance, formatTime } from "../lib/format";
 import "leaflet/dist/leaflet.css";
 
@@ -11,6 +11,7 @@ interface MapViewProps {
   soundtrack: Soundtrack | null;
   selectedTrackId: string | null;
   hoveredTrackId: string | null;
+  hoveredDistanceMeters?: number | null;
   onSelectTrack: (id: string) => void;
   onHoverTrack: (id: string | null) => void;
 }
@@ -48,6 +49,7 @@ export default function MapView({
   soundtrack,
   selectedTrackId,
   hoveredTrackId,
+  hoveredDistanceMeters,
   onSelectTrack,
   onHoverTrack,
 }: MapViewProps) {
@@ -88,13 +90,26 @@ export default function MapView({
             const color = trackColor(idx);
 
             return (
+              <React.Fragment key={seg.track.id}>
+              {/* Shadow halo — drawn below the colour layer */}
+              <Polyline
+                positions={segPoints}
+                pathOptions={{
+                  color: "#000",
+                  weight: isActive ? 11 : 7,
+                  opacity: isDimmed ? 0.08 : 0.35,
+                  lineCap: "round",
+                  lineJoin: "round",
+                }}
+                interactive={false}
+              />
               <Polyline
                 key={seg.track.id}
                 positions={segPoints}
                 pathOptions={{
                   color,
                   weight: isActive ? 7 : 4,
-                  opacity: isDimmed ? 0.2 : 0.85,
+                  opacity: isDimmed ? 0.25 : 0.9,
                 }}
                 eventHandlers={{
                   click: () => onSelectTrack(seg.track.id),
@@ -119,6 +134,7 @@ export default function MapView({
                   </div>
                 </Tooltip>
               </Polyline>
+              </React.Fragment>
             );
           })}
 
@@ -186,11 +202,35 @@ export default function MapView({
           })()}
         </>
       ) : (
-        <Polyline
-          positions={positions}
-          pathOptions={{ color: "#3b82f6", weight: 4, opacity: 0.8 }}
-        />
+        <>
+          <Polyline
+            positions={positions}
+            pathOptions={{ color: "#000", weight: 7, opacity: 0.3, lineCap: "round" }}
+            interactive={false}
+          />
+          <Polyline
+            positions={positions}
+            pathOptions={{ color: "#3b82f6", weight: 4, opacity: 0.9 }}
+          />
+        </>
       )}
+      {/* Distance pin — shown when hovering over the timeline */}
+      {hoveredDistanceMeters != null && (() => {
+        const coord = getCoordinateAtDistance(route, hoveredDistanceMeters);
+        return (
+          <CircleMarker
+            center={[coord.lat, coord.lng]}
+            radius={6}
+            pathOptions={{ color: "#fff", fillColor: "#fff", fillOpacity: 1, weight: 2 }}
+          >
+            <Tooltip direction="top" offset={[0, -8]} opacity={0.95} permanent={false}>
+              <div className="map-tooltip">
+                <div className="map-tooltip__meta">{formatDistance(hoveredDistanceMeters)}</div>
+              </div>
+            </Tooltip>
+          </CircleMarker>
+        );
+      })()}
     </MapContainer>
   );
 }

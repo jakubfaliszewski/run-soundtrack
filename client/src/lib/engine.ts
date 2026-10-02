@@ -39,21 +39,37 @@ export function parseGpxClientSide(xmlText: string): Route {
     throw new Error("Invalid coordinates in GPX file.");
   }
 
+  // Smooth elevations with a moving-average window to remove GPS noise.
+  // Only applied when elevation data is present.
+  const SMOOTH_WINDOW = 7; // ±3 points each side
+  const smoothedEle: Array<number | undefined> = rawPoints.map((pt, i) => {
+    if (pt.ele === undefined) return undefined;
+    let sum = 0, count = 0;
+    for (let j = Math.max(0, i - SMOOTH_WINDOW); j <= Math.min(rawPoints.length - 1, i + SMOOTH_WINDOW); j++) {
+      if (rawPoints[j].ele !== undefined) { sum += rawPoints[j].ele as number; count++; }
+    }
+    return count > 0 ? sum / count : undefined;
+  });
+
   const points: RoutePoint[] = [];
   let cumulativeDistance = 0;
   let elevationGain = 0;
+  // Only count gain if the smoothed rise exceeds 2 m (de-spike threshold)
+  const GAIN_THRESHOLD = 2;
 
   for (let i = 0; i < rawPoints.length; i++) {
     const pt = rawPoints[i];
+    const ele = smoothedEle[i];
     if (i > 0) {
       const prev = rawPoints[i - 1];
       cumulativeDistance += haversineMeters(prev.lat, prev.lng, pt.lat, pt.lng);
-      if (prev.ele !== undefined && pt.ele !== undefined) {
-        const diff = pt.ele - prev.ele;
-        if (diff > 0) elevationGain += diff;
+      const prevEle = smoothedEle[i - 1];
+      if (prevEle !== undefined && ele !== undefined) {
+        const diff = ele - prevEle;
+        if (diff > GAIN_THRESHOLD) elevationGain += diff;
       }
     }
-    points.push({ lat: pt.lat, lng: pt.lng, elevation: pt.ele, distanceMeters: cumulativeDistance });
+    points.push({ lat: pt.lat, lng: pt.lng, elevation: ele, distanceMeters: cumulativeDistance });
   }
 
   if (cumulativeDistance === 0) throw new Error("This GPX file has zero-length route.");

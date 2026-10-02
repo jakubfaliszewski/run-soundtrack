@@ -55,6 +55,7 @@ export default function App() {
   // UI overlays
   const [showSetup, setShowSetup] = useState(false);
   const [showSpotify, setShowSpotify] = useState(false);
+  const [hoveredDistanceMeters, setHoveredDistanceMeters] = useState<number | null>(null);
   // showBuilder: false | "new" | "edit"
   // "edit" means initialise the builder with the current active playlist (§12)
   const [showBuilder, setShowBuilder] = useState<false | "new" | "edit">(false);
@@ -266,53 +267,77 @@ export default function App() {
           />
         </div>
       ) : (
-        <div className="app-body">
-          <div className="map-section">
-            <MapView
-              route={route}
-              soundtrack={soundtrack}
-              selectedTrackId={selectedTrackId}
-              hoveredTrackId={hoveredTrackId}
-              onSelectTrack={selectTrack}
-              onHoverTrack={hoverTrack}
-            />
-          </div>
-
-          <div className="bottom-panel">
-            <div className="bottom-left">
-              <RunSummary
+        <div className={`app-body${showBuilder ? " app-body--with-sidebar" : ""}`}>
+          <div className="app-main">
+            <div className="map-section">
+              <MapView
                 route={route}
-                plan={runPlan}
                 soundtrack={soundtrack}
-                playlistSource={playlist[0]?.source === "spotify" ? "spotify" : "demo"}
-                onImportSpotify={() => setShowSpotify(true)}
+                selectedTrackId={selectedTrackId}
+                hoveredTrackId={hoveredTrackId}
+                hoveredDistanceMeters={hoveredDistanceMeters}
                 onSelectTrack={selectTrack}
+                onHoverTrack={hoverTrack}
               />
             </div>
-            <div className="bottom-right">
-              <PlaylistPanel
+
+            <div className="bottom-panel">
+              <div className="bottom-left">
+                <RunSummary
+                  route={route}
+                  plan={runPlan}
+                  soundtrack={soundtrack}
+                  playlistSource={playlist[0]?.source === "spotify" ? "spotify" : "demo"}
+                  onImportSpotify={() => setShowSpotify(true)}
+                  onSelectTrack={selectTrack}
+                />
+              </div>
+              <div className="bottom-right">
+                <PlaylistPanel
+                  soundtrack={soundtrack}
+                  selectedTrackId={selectedTrackId}
+                  hoveredTrackId={hoveredTrackId}
+                  onSelectTrack={selectTrack}
+                  onHoverTrack={hoverTrack}
+                  onChangePlaylist={() => setShowSpotify(true)}
+                  onCreatePlaylist={() => setShowBuilder("new")}
+                  onEditPlaylist={() => setShowBuilder("edit")}
+                />
+              </div>
+            </div>
+
+            <div className="timeline-section">
+              <Timeline
                 soundtrack={soundtrack}
+                totalDistanceMeters={route.totalDistanceMeters}
                 selectedTrackId={selectedTrackId}
                 hoveredTrackId={hoveredTrackId}
                 onSelectTrack={selectTrack}
                 onHoverTrack={hoverTrack}
-                onChangePlaylist={() => setShowSpotify(true)}
-                onCreatePlaylist={() => setShowBuilder("new")}
-                onEditPlaylist={() => setShowBuilder("edit")}
+                onHoverDistance={setHoveredDistanceMeters}
+                route={route}
               />
             </div>
           </div>
 
-          <div className="timeline-section">
-            <Timeline
-              soundtrack={soundtrack}
-              totalDistanceMeters={route.totalDistanceMeters}
-              selectedTrackId={selectedTrackId}
-              hoveredTrackId={hoveredTrackId}
-              onSelectTrack={selectTrack}
-              onHoverTrack={hoverTrack}
-            />
-          </div>
+          {showBuilder && (
+            <div className="app-sidebar">
+              <PlaylistBuilder
+                variant="sidebar"
+                initialDraft={
+                  showBuilder === "edit"
+                    ? { id: "active", name: playlistName, tracks: playlist }
+                    : loadDraftPlaylist()
+                }
+                runDurationSeconds={appState.runPlan.targetTimeSeconds}
+                routeName={routeName}
+                onGenerate={(tracks, name) => {
+                  handlePlaylistChange(tracks, name);
+                }}
+                onClose={() => setShowBuilder(false)}
+              />
+            </div>
+          )}
         </div>
       )}
 

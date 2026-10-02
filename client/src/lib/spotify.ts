@@ -198,6 +198,7 @@ export async function searchTracks(query: string): Promise<import("../types/doma
         name: string;
         uri: string;
         duration_ms: number;
+        preview_url: string | null;
         artists: Array<{ name: string }>;
         album: { name: string; images: Array<{ url: string }> };
       }>;
@@ -209,6 +210,7 @@ export async function searchTracks(query: string): Promise<import("../types/doma
     artist: t.artists[0]?.name ?? "Unknown",
     durationSeconds: Math.floor(t.duration_ms / 1000),
     artworkUrl: t.album.images[0]?.url,
+    previewUrl: t.preview_url ?? undefined,
     source: "spotify" as const,
     provider: "spotify" as const,
     externalId: t.id,
@@ -274,10 +276,10 @@ export async function getUserPlaylists(): Promise<Array<{
     if (!res.ok) throw new Error("Failed to load playlists.");
     const data = await res.json() as {
       next: string | null;
-      items: Array<{ id: string; name: string; items: { total: number }; images: Array<{ url: string }>; owner: { id: string } }>;
+      items: Array<{ id: string; name: string; tracks: { total: number }; images: Array<{ url: string }>; owner: { id: string } }>;
     };
     for (const pl of data.items) {
-      result.push({ id: pl.id, name: pl.name, trackCount: pl.items?.total ?? 0, imageUrl: pl.images?.[0]?.url ?? null, ownerId: pl.owner?.id ?? "" });
+      result.push({ id: pl.id, name: pl.name, trackCount: pl.tracks?.total ?? 0, imageUrl: pl.images?.[0]?.url ?? null, ownerId: pl.owner?.id ?? "" });
     }
     url = data.next ? data.next.replace("https://api.spotify.com/v1", "") : null;
   }
@@ -293,22 +295,37 @@ export async function getPlaylistTracks(playlistId: string): Promise<Track[]> {
     const data = await res.json() as {
       next: string | null;
       items: Array<{
+        // Spotify Web API returns the track object under "item" (not "track")
         item: {
-          id: string; name: string; duration_ms: number; type: string;
+          id: string; name: string; duration_ms: number; type?: string;
+          uri: string;
+          preview_url: string | null;
+          artists: Array<{ name: string }>;
+          album: { images: Array<{ url: string }> };
+        } | null;
+        // Older API versions used "track" — keep as fallback
+        track?: {
+          id: string; name: string; duration_ms: number; type?: string;
+          uri: string;
+          preview_url: string | null;
           artists: Array<{ name: string }>;
           album: { images: Array<{ url: string }> };
         } | null;
       }>;
     };
     for (const entry of data.items) {
-      const t = entry.item;
-      if (!t || t.type !== "track") continue;
+      const t = entry.item ?? entry.track ?? null;
+      // Skip nulls (local/deleted tracks) and explicit non-track types (episodes).
+      if (!t || (t.type !== undefined && t.type !== "track")) continue;
       tracks.push({
         id: t.id, title: t.name,
         artist: t.artists[0]?.name ?? "Unknown",
         durationSeconds: Math.floor(t.duration_ms / 1000),
         artworkUrl: t.album.images[0]?.url,
+        previewUrl: t.preview_url ?? undefined,
         source: "spotify", externalId: t.id,
+        providerTrackId: t.id,
+        spotifyUri: t.uri,
       });
     }
     url = data.next ? data.next.replace("https://api.spotify.com/v1", "") : null;

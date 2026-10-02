@@ -40,23 +40,27 @@ export default function PlaylistPanel({
   return (
     <div className="playlist-panel">
       <div className="playlist-panel__header">
-        <h3>Playlist</h3>
-        <span className="muted">{soundtrack.segments.length} songs</span>
-        {onCreatePlaylist && (
-          <button className="playlist-panel__change-btn" onClick={onCreatePlaylist}>
-            Build
-          </button>
-        )}
-        {onEditPlaylist && (
-          <button className="playlist-panel__change-btn" onClick={onEditPlaylist}>
-            Edit
-          </button>
-        )}
-        {onChangePlaylist && (
-          <button className="playlist-panel__change-btn" onClick={onChangePlaylist}>
-            Change
-          </button>
-        )}
+        <div>
+          <h3>Playlist</h3>
+          <span className="muted">{soundtrack.segments.length} songs</span>
+        </div>
+        <div>
+          {onCreatePlaylist && (
+            <button className="playlist-panel__change-btn" onClick={onCreatePlaylist}>
+              Build
+            </button>
+          )}
+          {onEditPlaylist && (
+            <button className="playlist-panel__change-btn" onClick={onEditPlaylist}>
+              Edit
+            </button>
+          )}
+          {onChangePlaylist && (
+            <button className="playlist-panel__change-btn" onClick={onChangePlaylist}>
+              Change
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Playlist shorter warning */}
