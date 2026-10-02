@@ -29,6 +29,8 @@ export type Track = {
   providerTrackId?: string;
   /** Spotify URI (e.g. "spotify:track:xxx") — required for playlist creation */
   spotifyUri?: string;
+  /** 30-second preview URL (may be null in some markets) */
+  previewUrl?: string;
 };
 
 export type DraftPlaylist = {

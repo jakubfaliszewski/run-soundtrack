@@ -230,7 +230,7 @@ body {
 }
 
 .bottom-left {
-  width: 300px;
+  width: 360px;
   flex-shrink: 0;
   border-right: 1px solid $color-border;
   overflow-y: auto;
@@ -2304,6 +2304,7 @@ body {
 // §15 Start/finish track bookmarks
 .summary-track-bookmarks {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   margin: 10px 0;
   padding: 10px 0;
@@ -2418,3 +2419,245 @@ body {
     z-index: 10;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Elevation profile (timeline)
+// ---------------------------------------------------------------------------
+
+.timeline__elevation-wrap {
+  position: relative;
+  height: 40px;
+  margin-bottom: 4px;
+  border-radius: $radius-xs;
+  overflow: hidden;
+}
+
+.timeline__elevation {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.timeline__elevation-path {
+  fill: rgba(59, 130, 246, 0.18);
+  stroke: rgba(59, 130, 246, 0.45);
+  stroke-width: 1.5;
+}
+
+// ---------------------------------------------------------------------------
+// Sidebar layout
+// ---------------------------------------------------------------------------
+
+.app-body--with-sidebar {
+  flex-direction: row;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-sidebar {
+  width: 380px;
+  flex-shrink: 0;
+  border-left: 1px solid $color-border;
+  background: $color-surface;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// Sidebar variant of PlaylistBuilder — fills the sidebar panel
+.pb-sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+
+  // Collapse the two-column search/playlist layout to a single column
+  .pb-columns {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .pb-col--search {
+    border-right: none;
+    border-bottom: 1px solid $color-border;
+    flex: none;
+  }
+
+  // Limit search results height so playlist col is still visible
+  .pb-search-results {
+    max-height: 220px;
+  }
+
+  .pb-col--playlist {
+    flex: 1;
+  }
+
+  // Remove the backdrop rounding — panel is edge-to-edge
+  .pb-modal__header {
+    border-radius: 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TrackItem — meta row (artist inline)
+// ---------------------------------------------------------------------------
+
+.track-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.3;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+// Redefine artist as inline span inside meta row
+.track-item__meta .track-item__artist {
+  font-size: 11px;
+  color: $color-muted;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+// ---------------------------------------------------------------------------
+// TrackArt — album art wrapper with preview overlay
+// ---------------------------------------------------------------------------
+
+.track-art {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: $radius-xs;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-surface-2;
+
+  &--md {
+    width: 36px;
+    height: 36px;
+  }
+
+  &--sm {
+    width: 32px;
+    height: 32px;
+  }
+
+  &__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  &__placeholder {
+    font-size: 14px;
+    color: $color-muted;
+  }
+
+  // ▶/⏸ preview button — hidden until hover
+  &__preview {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    border: none;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s;
+    padding: 0;
+    border-radius: 0;
+
+    &--playing {
+      opacity: 1;
+      background: rgba(0, 0, 0, 0.45);
+    }
+  }
+
+  &:hover &__preview {
+    opacity: 1;
+  }
+
+  // Spotify deep-link hint (↗) when no preview but has URI
+  &__spotify-hint {
+    position: absolute;
+    bottom: 1px;
+    right: 2px;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1;
+  }
+
+  // When the whole art is a link
+  &[href] {
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: inherit;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Elevation tooltip (timeline hover)
+// ---------------------------------------------------------------------------
+
+.timeline__elevation-tip {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  background: $color-surface-3;
+  border: 1px solid $color-border-light;
+  border-radius: $radius-sm;
+  padding: 4px 8px;
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  font-family: $font-mono;
+
+  &__dist {
+    color: $color-text;
+    font-weight: 600;
+  }
+
+  &__ele {
+    color: $color-accent-light;
+  }
+
+  &__incline {
+    color: $color-muted;
+
+    &--up   { color: #f87171; }
+    &--down { color: #4ade80; }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RunSummary — elevation gain/loss stat values
+// ---------------------------------------------------------------------------
+
+.summary-value--gain { color: #f87171; }
+.summary-value--loss { color: #4ade80; }
+

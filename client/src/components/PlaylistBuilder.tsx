@@ -10,6 +10,7 @@ import {
 } from "../lib/spotify";
 import { loadSpotifyTokens, saveDraftPlaylist } from "../lib/storage";
 import { formatTime } from "../lib/format";
+import TrackArt from "./TrackArt";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -53,7 +54,7 @@ interface UndoAction {
 }
 
 interface PlaylistBuilderProps {
-  /** Called when user clicks "Generate soundtrack" with at least one track. */
+  /** Called automatically (debounced 300 ms) whenever the track list or name changes. */
   onGenerate: (tracks: Track[], playlistName: string) => void;
   onClose: () => void;
   /** Optional run duration for the coverage panel. */
@@ -62,6 +63,8 @@ interface PlaylistBuilderProps {
   initialDraft?: DraftPlaylist | null;
   /** Route name for auto-generated playlist name suggestion. */
   routeName?: string;
+  /** "modal" (default) or "sidebar" — changes the outer wrapper element. */
+  variant?: "modal" | "sidebar";
 }
 
 // ---------------------------------------------------------------------------
@@ -77,11 +80,13 @@ function SearchResultRow({
 }) {
   return (
     <div className="pb-search-result">
-      {track.artworkUrl ? (
-        <img src={track.artworkUrl} alt="" className="pb-search-result__art" />
-      ) : (
-        <div className="pb-search-result__art pb-search-result__art--placeholder">♫</div>
-      )}
+      <TrackArt
+        artworkUrl={track.artworkUrl}
+        previewUrl={track.previewUrl}
+        spotifyUri={track.spotifyUri}
+        title={track.title}
+        size="sm"
+      />
       <div className="pb-search-result__info">
         <div className="pb-search-result__title">{track.title}</div>
         <div className="pb-search-result__artist muted">{track.artist}</div>
@@ -129,11 +134,13 @@ function PlaylistTrackRow({
     >
       <span className="pb-track-row__handle" title="Drag to reorder">⠿</span>
       <span className="pb-track-row__num muted">{index + 1}.</span>
-      {track.artworkUrl ? (
-        <img src={track.artworkUrl} alt="" className="pb-track-row__art" />
-      ) : (
-        <div className="pb-track-row__art pb-track-row__art--placeholder">♫</div>
-      )}
+      <TrackArt
+        artworkUrl={track.artworkUrl}
+        previewUrl={track.previewUrl}
+        spotifyUri={track.spotifyUri}
+        title={track.title}
+        size="sm"
+      />
       <div className="pb-track-row__info">
         <div className="pb-track-row__title">{track.title}</div>
         <div className="pb-track-row__artist muted">{track.artist}</div>
@@ -377,6 +384,7 @@ export default function PlaylistBuilder({
   runDurationSeconds,
   initialDraft,
   routeName,
+  variant = "modal",
 }: PlaylistBuilderProps) {
   // §18 — auto-suggest name, track whether user has edited it
   const suggestedName = buildSuggestedName(routeName, runDurationSeconds);
@@ -453,6 +461,17 @@ export default function PlaylistBuilder({
     }
   }, [draftId, name, tracks]);
 
+  // ── Auto-apply: call onGenerate whenever tracks or name settle ────────────
+  const applyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (tracks.length === 0) return;
+    if (applyTimer.current) clearTimeout(applyTimer.current);
+    applyTimer.current = setTimeout(() => {
+      onGenerate(tracks, name);
+    }, 300);
+    return () => { if (applyTimer.current) clearTimeout(applyTimer.current); };
+  }, [tracks, name, onGenerate]);
+
   // ── §10 Undo helpers ───────────────────────────────────────────────────────
   function pushUndo(label: string, prev: Track[]) {
     if (undoTimer.current) clearTimeout(undoTimer.current);
@@ -472,7 +491,12 @@ export default function PlaylistBuilder({
     const uniqueId = tracks.some((x) => x.id === t.id)
       ? `${t.id}-${Date.now()}`
       : t.id;
-    setTracks((prev) => [...prev, { ...t, id: uniqueId }]);
+    const enriched = { ...t, id: uniqueId };
+    setTracks((prev) => [...prev, enriched]);
+    // Fetch BPM for the newly-added track if not already known
+    if (!t.bpm && t.providerTrackId) {
+      enrichWithBpm([enriched]);
+    }
   }
 
   function removeTrack(index: number) {
@@ -510,10 +534,8 @@ export default function PlaylistBuilder({
   const total = totalDuration(tracks);
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  return (
-    <div className="pb-backdrop" onClick={onClose}>
-      <div className="pb-modal" onClick={(e) => e.stopPropagation()}>
-
+  const inner = (
+    <>
         {/* Header */}
         <div className="pb-modal__header">
           <span className="pb-modal__title">Create Playlist</span>
@@ -638,16 +660,19 @@ export default function PlaylistBuilder({
               />
             )}
 
-            {/* Generate */}
-            <button
-              className="btn-primary pb-generate-btn"
-              disabled={tracks.length === 0}
-              onClick={() => onGenerate(tracks, name)}
-            >
-              Generate soundtrack
-            </button>
           </div>
         </div>
+    </>
+  );
+
+  if (variant === "sidebar") {
+    return <div className="pb-sidebar">{inner}</div>;
+  }
+
+  return (
+    <div className="pb-backdrop" onClick={onClose}>
+      <div className="pb-modal" onClick={(e) => e.stopPropagation()}>
+        {inner}
       </div>
     </div>
   );

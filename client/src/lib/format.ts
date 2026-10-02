@@ -38,6 +38,11 @@ export function formatDistance(meters: number): string {
   return (meters / 1000).toFixed(2) + " km";
 }
 
+/** Format elevation in meters, e.g. "312 m" */
+export function formatElevation(meters: number): string {
+  return Math.round(meters) + " m";
+}
+
 /** Unique color per track index */
 const TRACK_COLORS = [
   "#3b82f6", "#ef4444", "#22c55e", "#f59e0b", "#8b5cf6",

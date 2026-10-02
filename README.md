@@ -2,7 +2,7 @@
 
 > "If I run this route at this pace, what song will be playing at every point of my run?"
 
-Map your playlist to your route. Upload a GPX file, set a target time and pacing strategy, and the app calculates exactly which song plays at each kilometre of your run — visualised on an interactive OpenStreetMap map with per-song polyline segments, transition markers, and a distance timeline.
+Map your playlist to your route. Upload a GPX file, set a target time and pacing strategy, and the app calculates exactly which song plays at each kilometre of your run — visualised on an interactive map with per-song polyline segments, transition markers, a distance timeline, and an elevation profile.
 
 No API keys required to run. Spotify integration is optional.
 
@@ -13,11 +13,14 @@ No API keys required to run. Spotify integration is optional.
 - **GPX import** — drag-and-drop or file picker; supports multi-segment tracks
 - **Pacing strategies** — even pace, negative split, positive split with configurable intensity
 - **Soundtrack calculation** — assigns songs sequentially to run time, converts time → distance → GPS coordinate for each song boundary
-- **Interactive map** — per-song coloured polylines, start/finish/transition markers, hover tooltips, click to select
-- **Timeline** — distance-proportional bar of all songs; click or hover to highlight the corresponding map segment
-- **In-app playlist builder** — search Spotify tracks, add/remove/reorder them into a custom playlist, see live duration, and save as a new Spotify playlist — all without leaving the app
+- **Interactive map** — per-song coloured polylines with shadow halos, start/finish/transition markers, hover tooltips, click to select; muted dark CartoDB tile layer
+- **Elevation profile** — SVG area chart above the timeline bar; hover for distance, elevation, and incline % at any point; position pin synced to the map
+- **Timeline** — distance-proportional bar of all songs; hover anywhere to drop a position pin on the map at that exact point
+- **Playlist builder sidebar** — search Spotify tracks, add/remove/reorder into a custom playlist with live coverage panel, all without closing the map; auto-applies changes in real time
+- **Spotify preview player** — hover album art to play a 30-second preview clip; art links to Spotify when no preview is available
 - **Spotify integration** — log in with Spotify (OAuth PKCE) to browse and select from your own playlists; or paste any public playlist URL (no login needed)
 - **Save to Spotify** — create a new private or public playlist directly from the builder with one click
+- **Elevation gain / loss** — computed from smoothed GPX data and shown in the run summary panel
 - **Start / finish track summary** — always see which song plays at the gun and at the finish line
 - **Demo playlist** — 25 tracks built in; app is fully usable without any Spotify account
 - **Light / dark mode** — toggle with one click; preference persists across sessions
@@ -72,7 +75,7 @@ npm test
 
 | Suite | Tests | What it covers |
 |---|---|---|
-| `engine.test.ts` | 35 | Haversine, GPX parsing, pace calculation, timed route, time→distance interpolation, GPS interpolation, soundtrack engine |
+| `engine.test.ts` | 35 | Haversine, GPX parsing (incl. elevation smoothing), pace calculation, timed route, time→distance interpolation, GPS interpolation, soundtrack engine |
 | `storage.test.ts` | 20 | Route, run plan, playlist, draft playlist, and Spotify token persistence |
 | `spotify.test.ts` | 22 | `SpotifyForbiddenError`, `hasWriteScopes`, `searchTracks` mapping, `createSpotifyPlaylist`, `addTracksToSpotifyPlaylist` |
 
@@ -112,6 +115,8 @@ Write scopes are only requested when the user explicitly clicks **Save to Spotif
 
 Spotify apps in Development Mode can only make write API calls on behalf of users added under **Settings → User Management** in the Developer Dashboard. Add your Spotify username there if you encounter 403 errors when saving playlists.
 
+> **Note:** Spotify's `/audio-features` endpoint (BPM / tempo data) is no longer accessible to apps without explicit allowlisting by Spotify. BPM display is not available.
+
 ### Public playlist URL import (no login)
 
 Paste any public Spotify playlist URL in the picker. This uses the server's Client Credentials flow and requires both credentials in `server/.env`:
@@ -129,36 +134,18 @@ The app works fine without any Spotify setup. The built-in demo playlist of 25 t
 
 ## Playlist Builder
 
-The in-app playlist builder lets you construct a custom running playlist from scratch:
-
-```
-Create Playlist
-
-Name
-[ My Running Playlist ]
-
-Search Spotify                    Your playlist
-[ 🔍 Search tracks… ]
-                                  1. The Pretender        4:29
-The Pretender                     2. Hysteria              3:45
-Foo Fighters          [+]        3. Everlong              4:10
-4:29
-                                  ─────────────────────────────
-Everlong                          Total  12:24
-Foo Fighters          [+]
-4:10                              [ Save to Spotify ]
-                                  [ Generate soundtrack ]
-```
+The in-app playlist builder opens as a **sidebar** — the map stays fully interactive while you edit:
 
 - Debounced search (300 ms), up to 10 results per query
+- Album art with hover-to-preview (30 s Spotify clip, where available) or tap-to-open-in-Spotify
 - Drag-and-drop reorder, or use ↑ / ↓ buttons
 - Duplicate tracks allowed (same song can appear multiple times)
 - **Live coverage panel** — shows playlist duration, run duration, coverage %, and a progress bar; updates on every edit
+- **Auto-apply** — soundtrack updates 300 ms after any change, no manual "Generate" step needed
 - **Undo** — remove or reorder a track and get a 3-second toast to undo it
 - **Auto-named** — playlist name pre-filled as `{Route} — {target time}`, never overwritten once you type your own
 - **Autosave indicator** — "✓ Saved" / "Saving…" feedback next to the name field
 - **Edit from result screen** — open the builder pre-loaded with the current active playlist via the **Edit** button in the playlist panel
-- **Back to playlist** — after generating a soundtrack, re-open the builder to iterate without starting over
 - Draft auto-saved to `localStorage` — survives a page refresh
 - **Save to Spotify** creates a new playlist (private by default) and adds all tracks in the current order
 
@@ -168,7 +155,7 @@ Foo Fighters          [+]
 
 ```
 GPX file
-  └─▶ Route (points + cumulative distance)
+  └─▶ Route (points + cumulative distance + smoothed elevation)
         └─▶ RunPlan (target time + pacing strategy)
               └─▶ TimedRoute (each point gains elapsedSeconds)
                     └─▶ Soundtrack Engine
@@ -188,17 +175,18 @@ The **Soundtrack Engine** is a pure function — it receives `Route`, `TimedRout
 | `server/src/services/distance.ts` | Haversine formula |
 | `server/src/routes/route.ts` | `POST /api/routes/parse`, `POST /api/soundtrack` |
 | `server/src/routes/spotify.ts` | Public playlist import endpoint (client credentials) |
-| `client/src/lib/engine.ts` | Client-side mirror of the engine (offline fallback) |
-| `client/src/lib/spotify.ts` | PKCE auth + Spotify API: search, create playlist, add tracks |
+| `client/src/lib/engine.ts` | Client-side mirror of the engine (offline fallback); GPX elevation smoother |
+| `client/src/lib/spotify.ts` | PKCE auth + Spotify API: search, preview URL capture, create playlist, add tracks |
 | `client/src/lib/api.ts` | Server API calls (GPX parse, soundtrack, public playlist import) |
 | `client/src/lib/storage.ts` | LocalStorage: route, run plan, playlist, draft playlist, tokens |
 | `client/src/components/Wizard.tsx` | Onboarding flow (GPX → pace → playlist choice) |
-| `client/src/components/PlaylistBuilder.tsx` | In-app playlist builder (search, edit, save to Spotify) |
-| `client/src/components/MapView.tsx` | Leaflet map with segments, markers, tooltips |
+| `client/src/components/PlaylistBuilder.tsx` | Sidebar playlist builder (search, edit, auto-apply, save to Spotify) |
+| `client/src/components/MapView.tsx` | Leaflet map: segments with shadow halos, markers, distance pin |
+| `client/src/components/Timeline.tsx` | Distance timeline + elevation profile with hover tooltip |
+| `client/src/components/TrackArt.tsx` | Album art with preview player and Spotify deep-link |
 | `client/src/components/SpotifyPicker.tsx` | Spotify login + playlist grid |
 | `client/src/components/PlaylistPanel.tsx` | Active playlist panel with Change / Build / Edit actions |
-| `client/src/components/RunSummary.tsx` | Run stats + start/finish track summary |
-| `client/src/components/Timeline.tsx` | Distance-proportional timeline bar |
+| `client/src/components/RunSummary.tsx` | Run stats, elevation gain/loss, start/finish track summary |
 
 ### Domain types
 
@@ -214,6 +202,7 @@ type Track = {
   spotifyUri?: string;            // e.g. "spotify:track:abc123"
   artworkUrl?: string;
   externalId?: string;
+  previewUrl?: string;            // 30-second preview (market-dependent)
 };
 
 type DraftPlaylist = {
@@ -272,7 +261,7 @@ Split intensity is configurable (5 – 30%). Both paces are derived from the ave
 |---|---|
 | Frontend | React 18, TypeScript, Vite 7 |
 | Styles | SCSS (no CSS framework) |
-| Map | Leaflet + React-Leaflet + OpenStreetMap |
+| Map | Leaflet + React-Leaflet + CartoDB Dark tiles |
 | Backend | Node.js, TypeScript, Fastify 5 |
 | GPX parsing | fast-xml-parser |
 | Tests | Vitest |

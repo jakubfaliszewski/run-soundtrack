@@ -1,5 +1,5 @@
 import type { Soundtrack, Route, RunPlan } from "../types/domain";
-import { formatDistance, formatPace, formatTime, formatTimeHMS } from "../lib/format";
+import { formatDistance, formatElevation, formatPace, formatTime, formatTimeHMS } from "../lib/format";
 
 interface RunSummaryProps {
   route: Route;
@@ -16,6 +16,20 @@ export default function RunSummary({ route, plan, soundtrack, playlistSource, on
   const avgPace = plan.startPaceSecondsPerKm === plan.endPaceSecondsPerKm
     ? plan.startPaceSecondsPerKm
     : (plan.startPaceSecondsPerKm + plan.endPaceSecondsPerKm) / 2;
+
+  // Compute elevation gain/loss from points if available
+  const { gain, loss } = (() => {
+    const pts = route.points.filter((p) => p.elevation != null);
+    if (pts.length < 2) {
+      return { gain: route.elevationGainMeters ?? null, loss: null };
+    }
+    let g = 0, l = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const d = (pts[i].elevation as number) - (pts[i - 1].elevation as number);
+      if (d > 0) g += d; else l -= d;
+    }
+    return { gain: g, loss: l };
+  })();
 
   // §15 — start/finish tracks
   const startSeg = soundtrack.segments[0] ?? null;
@@ -53,6 +67,18 @@ export default function RunSummary({ route, plan, soundtrack, playlistSource, on
           <span className="summary-value">{soundtrack.segments.length}</span>
           <span className="summary-label">songs</span>
         </div>
+        {gain != null && (
+          <div className="summary-item">
+            <span className="summary-value summary-value--gain">↑ {formatElevation(gain)}</span>
+            <span className="summary-label">gain</span>
+          </div>
+        )}
+        {loss != null && (
+          <div className="summary-item">
+            <span className="summary-value summary-value--loss">↓ {formatElevation(loss)}</span>
+            <span className="summary-label">loss</span>
+          </div>
+        )}
       </div>
 
       <div className="summary-strategy">
