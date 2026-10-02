@@ -6,6 +6,9 @@ Map your playlist to your route. Upload a GPX file, set a target time and pacing
 
 No API keys required to run. Spotify integration is optional.
 
+<img width="3356" height="1920" alt="image" src="https://github.com/user-attachments/assets/bc01d756-8382-43c4-bece-b920e4df791d" />
+
+
 ---
 
 ## Features

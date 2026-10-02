@@ -348,6 +348,23 @@ export default function App() {
         />
       )}
 
+      {showBuilder && (
+        <PlaylistBuilder
+          initialDraft={
+            showBuilder === "edit"
+              ? { id: "active", name: playlistName, tracks: playlist }
+              : loadDraftPlaylist()
+          }
+          runDurationSeconds={appState.runPlan.targetTimeSeconds}
+          routeName={routeName}
+          onGenerate={(tracks, name) => {
+            handlePlaylistChange(tracks, name);
+            setShowBuilder(false);
+          }}
+          onClose={() => setShowBuilder(false)}
+        />
+      )}
+
       {loading && (
         <div className="loading-overlay">
           <div className="loading-spinner" />
